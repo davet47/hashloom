@@ -32,6 +32,18 @@ def _norm(value: object) -> str:
     return _WS.sub(" ", str(value).strip())
 
 
+def validate_name(name: str) -> None:
+    """A contract name maps to `contracts/<name>.yaml`, with `/` marking namespace
+    subdirectories (`billing/invoice`). Keep it a safe relative path so a name can
+    never escape `contracts/`: no absolute paths, no `..`, no backslashes."""
+    if "\\" in name:
+        raise HeddleError("invalid_name", f"contract name '{name}' must use '/' for namespaces, not backslash", contract=name)
+    if name.startswith("/"):
+        raise HeddleError("invalid_name", f"contract name '{name}' must be relative, not absolute", contract=name)
+    if any(part in ("", ".", "..") for part in name.split("/")):
+        raise HeddleError("invalid_name", f"contract name '{name}' has an empty or '.'/'..' path segment", contract=name)
+
+
 def parse_contract(text: str, expect_name: str | None = None) -> dict:
     """Parse and validate one contract YAML document. Returns the raw dict."""
     try:
@@ -46,6 +58,7 @@ def parse_contract(text: str, expect_name: str | None = None) -> dict:
     if not isinstance(name, str) or not name.strip():
         raise HeddleError("invalid_shape", "contract must have a non-empty string 'name'", contract=expect_name)
     name = name.strip()
+    validate_name(name)
     if expect_name is not None and name != expect_name:
         raise HeddleError(
             "name_mismatch",

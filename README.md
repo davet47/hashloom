@@ -66,6 +66,10 @@ tests: [tests/test_revenue.py::test_revenue_by_region]   # pytest node IDs
 impl: src/revenue.py::revenue_by_region                  # current woven weft
 ```
 
+Subdirectories are namespaces: `contracts/billing/invoice.yaml` is the contract
+`billing/invoice`, so the same short name can live in different folders. A
+contract's `name` must match its path under `contracts/`.
+
 ### Hashing semantics
 
 - **Contract hash** — sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, invariant/example order preserved (order is meaning), dep order ignored. `impl` and `tests` are excluded: **relocating files never invalidates.**
