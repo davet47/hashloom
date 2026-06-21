@@ -15,7 +15,12 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("init", help="create .heddle/ and contracts/ in the current directory")
     sub.add_parser("index", help="rebuild the store from contracts/")
-    sub.add_parser("serve", help="run the MCP server on stdio")
+    serve_parser = sub.add_parser("serve", help="run the MCP server on stdio")
+    serve_parser.add_argument(
+        "--python",
+        metavar="PATH",
+        help="interpreter to run pytest with (default: project .venv, else this interpreter)",
+    )
     sub.add_parser("status", help="dirty contracts, stale verifications, cache hit-rate, token counters")
     args = parser.parse_args(argv)
 
@@ -34,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "serve":
             from .server import serve
 
-            serve(root)
+            serve(root, python=args.python)
             return 0
 
         from .store import Store

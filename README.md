@@ -81,6 +81,17 @@ impl: src/revenue.py::revenue_by_region                  # current woven weft
 
 Every tool returns structured errors — `{"error": {"code": "unknown_dep", "message": "'Regoin' not found — nearest: 'Region'"}}` — never a stack trace.
 
+### The verify interpreter
+
+`verify` runs your tests with the project's own python, resolved in order:
+`heddle serve --python PATH` → `.heddle/config.json` (`{"python": "..."}`) → an
+auto-detected `<project>/.venv` → the interpreter running heddle. So a
+globally-installed heddle can verify a project against its own virtualenv without
+being installed into it; `heddle status` shows which interpreter it resolved.
+
+`.heddle/config.json` also takes `verify_timeout` (seconds per pytest run,
+default 300) for suites that need longer than the default.
+
 ## CLI
 
 `heddle init` · `heddle index` · `heddle serve` · `heddle status`. That's all. The sqlite store under `.heddle/` is derived state: delete it any time and `heddle index` rebuilds it from `contracts/`.

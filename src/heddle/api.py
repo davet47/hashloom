@@ -10,6 +10,7 @@ from pathlib import Path
 
 import yaml
 
+from .config import resolve_python
 from .contract import contract_hash, parse_contract
 from .errors import HeddleError, unknown_name
 from .implhash import impl_hash
@@ -97,14 +98,20 @@ def get_dependents(root: Path, store: Store, name: str, transitive: bool = False
     }
 
 
-def verify(root: Path, store: Store, names: str | list[str]) -> dict:
+def verify(
+    root: Path,
+    store: Store,
+    names: str | list[str],
+    python: str | None = None,
+    timeout: int | float | None = None,
+) -> dict:
     """Per-unit cached-pass / pass / fail. Runs pytest only on cache misses."""
     if isinstance(names, str):
         names = [names]
     results = []
     for name in names:
         try:
-            r = verify_one(root, store, name)
+            r = verify_one(root, store, name, python=python, timeout=timeout)
             r.pop("key")  # internal cache key — pure token weight to an agent
             if not r["summary"]:
                 r.pop("summary")
@@ -138,6 +145,7 @@ def status(root: Path, store: Store) -> dict:
         "contracts": len(store.contract_names()),
         "dirty": dirty,
         "stale_verifications": store.stale_verifications(),
+        "python": resolve_python(root),  # which interpreter verify shells pytest to
         "cache": {
             "hits": hits,
             "misses": misses,
