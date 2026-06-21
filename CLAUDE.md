@@ -18,7 +18,7 @@ committing. Worktrees are too much machinery for this project.
 
 Anything not on the current milestone is an entry in [ISSUES.md](ISSUES.md) — file
 it there, don't write the code. The named failure mode is "scope creep toward
-Loom." Keep the surface minimal: **5 MCP tools, 4 CLI commands.** The README
+Loom." Keep the surface minimal: **5 MCP tools, 5 CLI commands.** The README
 documents "the entire surface"; if a change would add to it, stop and confirm.
 
 ## Definition of done: >5x token reduction

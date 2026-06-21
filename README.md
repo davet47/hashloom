@@ -97,7 +97,9 @@ default 300) for suites that need longer than the default.
 
 ## CLI
 
-`heddle init` · `heddle index` · `heddle serve` · `heddle status`. That's all. The sqlite store under `.heddle/` is derived state: delete it any time and `heddle index` rebuilds it from `contracts/`.
+`heddle init` · `heddle index` · `heddle serve` · `heddle status` · `heddle verify`. The sqlite store under `.heddle/` is derived state: delete it any time and `heddle index` rebuilds it from `contracts/`.
+
+`heddle verify <name>…` runs the same cached verification as the MCP tool from the command line and exits nonzero if any unit fails — drop it in CI or a pre-commit hook.
 
 ## Try the sample project
 
