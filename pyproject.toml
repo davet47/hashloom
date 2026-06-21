@@ -1,6 +1,6 @@
 [project]
 name = "heddle"
-version = "0.1.0"
+dynamic = ["version"]  # single-sourced from src/heddle/__init__.py
 description = "Hash-keyed verification caching and content-addressed contracts for spec-driven development, over MCP."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -11,7 +11,12 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = [
@@ -26,10 +31,15 @@ heddle = "heddle.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/davet47/heddle"
+Repository = "https://github.com/davet47/heddle"
+Issues = "https://github.com/davet47/heddle/issues"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/heddle/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/heddle"]

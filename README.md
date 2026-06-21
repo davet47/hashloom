@@ -8,7 +8,7 @@ The heddle is the part of a loom that holds the warp threads — the fixed, dura
 
 ## The number
 
-Same three regeneration tasks on a 20-contract sample project, once with raw file reads, once through heddle (tiktoken cl100k, reproduce with `python bench/benchmark.py`):
+Same three regeneration tasks on a 20-contract sample project, once with raw file reads, once through heddle (tiktoken cl100k, reproduce with `uv run python bench/benchmark.py`):
 
 | task                | raw files | heddle | reduction |
 |---------------------|----------:|-------:|----------:|
@@ -84,7 +84,7 @@ contract's `name` must match its path under `contracts/`.
 | `put_contract` | validate, write `contracts/<name>.yaml`, return new hash + every invalidated dependent |
 | `get_dependents` | blast-radius query, direct or transitive, names + hashes |
 | `verify` | per-unit `cached-pass` / `pass` / `fail`; runs pytest only on cache misses; failures come back as a ≤40-token assertion summary, never a traceback |
-| `status` | dirty contracts, stale verifications, cache hit-rate, cumulative token counters |
+| `status` | dirty contracts, stale verifications, cache hit-rate, resolved verify interpreter, cumulative token counters |
 
 Every tool returns structured errors — `{"error": {"code": "unknown_dep", "message": "'Regoin' not found — nearest: 'Region'"}}` — never a stack trace.
 
@@ -121,7 +121,7 @@ heddle init && heddle index && heddle serve   # then point your agent at it
 
 ```bash
 uv sync
-uv run pytest             # 46 tests; hash stability is the load-bearing suite
+uv run pytest             # full suite; hash stability is the load-bearing suite
 uv run python bench/benchmark.py
 ```
 

@@ -5,7 +5,17 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
+from heddle import __version__
 from heddle.cli import main
+
+
+def test_version_flag_prints_version_and_exits_zero(capsys):
+    with pytest.raises(SystemExit) as e:  # argparse's version action exits
+        main(["--version"])
+    assert e.value.code == 0
+    assert __version__ in capsys.readouterr().out
 
 
 def test_verify_cli_passes_with_zero_exit(project, monkeypatch, capsys):

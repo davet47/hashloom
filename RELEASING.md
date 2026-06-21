@@ -5,7 +5,8 @@ maintainer runs the upload by hand — CI does not publish.
 
 ## Steps
 
-1. Bump `version` in `pyproject.toml` (skip for the first `0.1.0` cut).
+1. Bump `__version__` in `src/heddle/__init__.py` — the single source of truth;
+   the wheel version derives from it (skip for the first `0.1.0` cut).
 2. Confirm green — CI runs both, but check locally too:
    ```bash
    uv run pytest

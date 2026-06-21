@@ -7,11 +7,13 @@ import json
 import sys
 from pathlib import Path
 
+from . import __version__
 from .errors import HeddleError
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="heddle", description="Content-addressed contracts + cached verification over MCP.")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("init", help="create .heddle/ and contracts/ in the current directory")
     sub.add_parser("index", help="rebuild the store from contracts/")
