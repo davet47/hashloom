@@ -14,7 +14,7 @@ from .config import resolve_python
 from .contract import contract_hash, parse_contract
 from .errors import HeddleError, unknown_name
 from .implhash import impl_hash
-from .project import atomic_write_text, contract_lock, safe_contract_path
+from .project import atomic_write_text, case_collision, contract_lock, safe_contract_path
 from .store import Store
 from .verify import verification_key, verify_one
 
@@ -65,6 +65,13 @@ def put_contract(root: Path, store: Store, name: str, yaml_text: str) -> dict:
 
     new_hash = contract_hash(data)
     target = safe_contract_path(root, name)  # also refuses a name that escapes contracts/
+    collision = case_collision(target)
+    if collision is not None:
+        raise HeddleError(
+            "name_collision",
+            f"'{name}' collides with existing contract file '{collision}' on a case-insensitive filesystem",
+            contract=name,
+        )
     # lock the name so concurrent put_contract on it can't interleave the file
     # write and the store update and leave the two disagreeing
     with contract_lock(root, name):

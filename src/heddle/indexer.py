@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 from .contract import contract_hash, parse_contract
 from .errors import HeddleError, unknown_name
 from .implhash import impl_hash
@@ -26,9 +28,27 @@ def index(root: Path, store: Store) -> dict:
     files = sorted(cdir.rglob("*.yaml")) + sorted(cdir.rglob("*.yml"))
     parsed: dict[str, tuple[dict, str]] = {}
     for f in files:
-        expect = f.relative_to(cdir).with_suffix("").as_posix()
+        rel = f.relative_to(cdir)
+        if any(part.startswith(".") for part in rel.parts):
+            continue  # hidden / vendored files and dirs are not contracts
         text = f.read_text(encoding="utf-8")
+        try:
+            probe = yaml.safe_load(text)
+        except yaml.YAMLError as e:
+            raise HeddleError("invalid_yaml", f"'{rel.as_posix()}' is not valid YAML: {e}")
+        if not (isinstance(probe, dict) and "name" in probe and "signature" in probe):
+            # a contract self-identifies by its two required keys; other YAML under
+            # contracts/ (mkdocs, CI, compose, data fixtures) is skipped, not fatal.
+            # A doc with both keys but a wrong name still trips name_mismatch below.
+            continue
+        expect = rel.with_suffix("").as_posix()
         data = parse_contract(text, expect_name=expect)
+        if data["name"] in parsed:
+            raise HeddleError(
+                "duplicate_contract",
+                f"contract '{data['name']}' is defined by more than one file",
+                contract=data["name"],
+            )
         parsed[data["name"]] = (data, text)
 
     # two-pass: all names known before deps are validated

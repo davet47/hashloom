@@ -58,6 +58,29 @@ def safe_contract_path(root: Path, name: str) -> Path:
     return target
 
 
+def case_collision(target: Path) -> str | None:
+    """On a case-insensitive filesystem, return the on-disk name of a file that
+    already occupies `target`'s slot under a *different* spelling — else None.
+
+    Two names differing only in case (billing/Invoice vs billing/invoice) map to
+    one file there; writing the second would silently clobber the first and split
+    the store from disk (then `heddle index` can't rebuild). put_contract refuses
+    it. On a case-sensitive filesystem the two are genuinely distinct files, so
+    `samefile` is False and they coexist.
+    """
+    parent = target.parent
+    if not parent.exists() or not target.exists():
+        return None
+    for entry in parent.iterdir():
+        if entry.name != target.name and entry.name.lower() == target.name.lower():
+            try:
+                if entry.samefile(target):
+                    return entry.name
+            except OSError:
+                pass
+    return None
+
+
 def init_project(root: Path) -> list[str]:
     """Create .heddle/ and contracts/. Returns the paths created."""
     created = []
@@ -92,8 +115,10 @@ def atomic_write_text(path: Path, text: str, encoding: str = "utf-8") -> None:
 
 
 def _lock_key(name: str) -> str:
-    """A filesystem-safe lock filename for a (possibly namespaced) contract name."""
-    return name.replace("/", "__").replace("\\", "__")
+    """An injective, filesystem-safe lock filename for a (possibly namespaced)
+    contract name — percent-encode the separators so distinct names (e.g. `a/b`
+    and `a__b`) never share a lock file."""
+    return name.replace("%", "%25").replace("/", "%2F").replace("\\", "%5C")
 
 
 @contextmanager
