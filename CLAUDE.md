@@ -6,13 +6,16 @@ rules override default behavior — follow them.
 
 ## Git is the user's
 
-**Never `git commit`, never `git push`.** Leave finished work in the working tree.
-The user decides when to commit and when to push. You may stage nothing on their
-behalf — just make the edits and report what changed.
+**Commit and push only when the user explicitly asks** — never on your own, and
+write **no `Co-Authored-By` trailer** when you do. The user owns the PR/merge flow
+and brings local back to a clean, synced `main` before each new piece of work.
 
-**Use branches, never git worktrees.** For a new unit of work, create a feature
-branch (`git switch -c <name>`) — that carries uncommitted changes across without
-committing. Worktrees are too much machinery for this project.
+**A fresh branch per change.** The first action on any new feature/change is
+`git switch -c <scoped-name>` off `main` — never commit to `main`, and never reuse
+a previous feature branch for new work. One piece = one branch = one PR.
+
+**Never git worktrees** — too much machinery for this project; the user dislikes
+them. Don't reach for worktree isolation.
 
 ## Scope discipline
 
