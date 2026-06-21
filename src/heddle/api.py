@@ -14,7 +14,7 @@ from .config import resolve_python
 from .contract import contract_hash, parse_contract
 from .errors import HeddleError, unknown_name
 from .implhash import impl_hash
-from .project import contract_path
+from .project import atomic_write_text, contract_lock, contract_path
 from .store import Store
 from .verify import verification_key, verify_one
 
@@ -64,24 +64,26 @@ def put_contract(root: Path, store: Store, name: str, yaml_text: str) -> dict:
             raise unknown_name("unknown_dep", dep, sorted(known - {name}), contract=name)
 
     new_hash = contract_hash(data)
-    old = store.get_contract(name)
-    changed = old is None or old["hash"] != new_hash
+    # lock the name so concurrent put_contract on it can't interleave the file
+    # write and the store update and leave the two disagreeing
+    with contract_lock(root, name):
+        old = store.get_contract(name)
+        changed = old is None or old["hash"] != new_hash
 
-    contract_path(root, name).parent.mkdir(parents=True, exist_ok=True)
-    contract_path(root, name).write_text(yaml_text, encoding="utf-8")
-    store.upsert_contract(name, new_hash, yaml_text)
-    store.set_deps(name, data.get("deps", []))
-    if "impl" in data:
-        try:
-            ihash = impl_hash(root, data["impl"], contract=name)
-        except HeddleError:
-            ihash = None
-        store.upsert_impl(name, ihash, data["impl"].partition("::")[0])
+        atomic_write_text(contract_path(root, name), yaml_text)
+        store.upsert_contract(name, new_hash, yaml_text)
+        store.set_deps(name, data.get("deps", []))
+        if "impl" in data:
+            try:
+                ihash = impl_hash(root, data["impl"], contract=name)
+            except HeddleError:
+                ihash = None
+            store.upsert_impl(name, ihash, data["impl"].partition("::")[0])
 
-    invalidated: list[str] = []
-    if changed:
-        invalidated = store.dependents_of(name, transitive=True)
-        store.mark_stale([name, *invalidated])
+        invalidated: list[str] = []
+        if changed:
+            invalidated = store.dependents_of(name, transitive=True)
+            store.mark_stale([name, *invalidated])
     return {"name": name, "hash": _short(new_hash), "changed": changed, "invalidated": invalidated}
 
 
