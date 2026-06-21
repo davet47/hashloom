@@ -1,4 +1,4 @@
-"""CLI: heddle init · heddle index · heddle serve · heddle status. That's all."""
+"""CLI: heddle init · heddle index · heddle serve · heddle status · heddle verify."""
 
 from __future__ import annotations
 
@@ -22,6 +22,13 @@ def main(argv: list[str] | None = None) -> int:
         help="interpreter to run pytest with (default: project .venv, else this interpreter)",
     )
     sub.add_parser("status", help="dirty contracts, stale verifications, cache hit-rate, token counters")
+    verify_parser = sub.add_parser("verify", help="run cached verification for one or more contracts")
+    verify_parser.add_argument("names", nargs="+", metavar="NAME", help="contract names to verify")
+    verify_parser.add_argument(
+        "--python",
+        metavar="PATH",
+        help="interpreter to run pytest with (default: project .venv, else this interpreter)",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -53,6 +60,14 @@ def main(argv: list[str] | None = None) -> int:
             from . import api
 
             print(json.dumps(api.status(root, store), indent=2))
+        elif args.command == "verify":
+            from . import api
+
+            result = api.verify(root, store, args.names, python=args.python)
+            print(json.dumps(result, indent=2))
+            # nonzero if any unit failed or errored — usable as a CI/pre-commit gate
+            if any(r["status"] in ("fail", "error") for r in result["results"]):
+                return 1
         return 0
     except HeddleError as e:
         print(json.dumps(e.to_dict(), indent=2), file=sys.stderr)
