@@ -71,4 +71,7 @@ uv run pytest                       # full suite — hash stability is load-bear
 uv run python bench/benchmark.py    # the DoD number
 ```
 
+CI (`.github/workflows/ci.yml`) runs both on every push and PR, so the DoD and
+hash-stability rules are enforced, not just documented. Keep it green.
+
 Python >=3.10. Deps: mcp, pyyaml, tiktoken, pytest.

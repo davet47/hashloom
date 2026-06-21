@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# cancel superseded runs on the same ref (e.g. rapid pushes)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Sync deps
+        run: uv sync --frozen --python ${{ matrix.python-version }}
+      - name: Run tests
+        # hash-stability suites are load-bearing; e2e spawns the real stdio server
+        run: uv run --python ${{ matrix.python-version }} pytest -q
+
+  benchmark:
+    name: benchmark (>5x DoD guard)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Sync deps
+        run: uv sync --frozen
+      - name: Token-reduction benchmark
+        # exits nonzero below the 5x definition-of-done line
+        run: uv run python bench/benchmark.py

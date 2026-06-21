@@ -1,5 +1,7 @@
 # heddle
 
+[![CI](https://github.com/davet47/heddle/actions/workflows/ci.yml/badge.svg)](https://github.com/davet47/heddle/actions/workflows/ci.yml)
+
 **Hash-keyed verification caching and content-addressed contracts for spec-driven development.** An MCP server that makes agent regeneration loops cheap.
 
 The heddle is the part of a loom that holds the warp threads — the fixed, durable strands — while the shuttle weaves disposable weft through them. **Contracts are warp. Code is weft.**
@@ -30,7 +32,8 @@ Heddle fixes this with a content-addressed contract store and a hash-keyed verif
 ## Quickstart
 
 ```bash
-pip install heddle          # until the PyPI release: pip install git+<this repo>
+pip install heddle
+# or from source: pip install "git+https://github.com/davet47/heddle"
 
 cd your-project
 heddle init                 # creates .heddle/ and contracts/
