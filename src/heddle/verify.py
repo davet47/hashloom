@@ -11,12 +11,12 @@ import hashlib
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 import yaml
 
 from . import tokens
+from .config import resolve_python, resolve_timeout
 from .errors import HeddleError, unknown_name
 from .implhash import impl_hash
 from .store import Store
@@ -25,7 +25,10 @@ SUMMARY_MAX_TOKENS = 40
 
 
 def verification_key(store: Store, name: str, ihash: str) -> str:
-    chash = store.get_contract(name)["hash"]
+    row = store.get_contract(name)
+    if row is None:
+        raise unknown_name("unknown_contract", name, store.contract_names())
+    chash = row["hash"]
     hashes = store.contract_hashes()
     dep_part = ",".join(f"{d}={hashes[d]}" for d in store.transitive_deps(name) if d in hashes)
     raw = f"contract={chash}|impl={ihash}|deps={dep_part}"
@@ -46,16 +49,16 @@ def _failure_summary(stdout: str) -> str:
     return tokens.truncate(re.sub(r"\s+", " ", summary), SUMMARY_MAX_TOKENS)
 
 
-def _run_pytest(root: Path, node_ids: list[str]) -> tuple[bool, str]:
+def _run_pytest(root: Path, node_ids: list[str], python: str, timeout: int | float) -> tuple[bool, str]:
     proc = subprocess.run(
         # -B: regeneration loops rewrite source faster than mtime granularity,
         # so cached bytecode could silently test the previous weft
-        [sys.executable, "-B", "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider", *node_ids],
+        [python, "-B", "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider", *node_ids],
         cwd=root,
         env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
         capture_output=True,
         text=True,
-        timeout=300,
+        timeout=timeout,
     )
     out = proc.stdout + "\n" + proc.stderr
     if proc.returncode in (2, 3, 4):  # interrupted / internal error / usage error
@@ -63,11 +66,24 @@ def _run_pytest(root: Path, node_ids: list[str]) -> tuple[bool, str]:
             "tests_failed_to_run",
             tokens.truncate("pytest could not run: " + re.sub(r"\s+", " ", out.strip()), 60),
         )
+    # shelling out to a target venv that lacks pytest reports as exit 1 ("No
+    # module named pytest"); surface that as a runner error, not a test failure
+    if proc.returncode == 1 and "No module named pytest" in out:
+        raise HeddleError("tests_failed_to_run", f"pytest is not installed in '{python}'")
     return proc.returncode == 0, out
 
 
-def verify_one(root: Path, store: Store, name: str) -> dict:
-    """Verify a single contract. Returns {name, status, summary, key}."""
+def verify_one(
+    root: Path, store: Store, name: str, python: str | None = None, timeout: int | float | None = None
+) -> dict:
+    """Verify a single contract. Returns {name, status, summary, key}.
+
+    `python` is the interpreter to run pytest with and `timeout` its per-run
+    budget; both resolve lazily from the project when None, so direct callers
+    (CLI, benchmark, tests) need not pass them.
+    """
+    interp = python or resolve_python(root)
+    budget = timeout if timeout is not None else resolve_timeout(root)
     row = store.get_contract(name)
     if row is None:
         raise unknown_name("unknown_contract", name, store.contract_names())
@@ -90,7 +106,7 @@ def verify_one(root: Path, store: Store, name: str) -> dict:
 
     store.incr("cache_misses")
     store.incr("test_runs")
-    ok, out = _run_pytest(root, data["tests"])
+    ok, out = _run_pytest(root, data["tests"], interp, budget)
     if ok:
         summary = ""
         store.record_verification(key, name, "pass", summary)

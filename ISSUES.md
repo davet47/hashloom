@@ -17,8 +17,7 @@ the GitHub tracker once the repo has a remote.
 7. **PyPI release** — `pip install heddle` in the README assumes publication; cut 0.1.0 to PyPI.
 8. **README gif** — record the Claude Code → heddle demo loop.
 9. **Pre-existing stale bytecode** — the verification runner passes `-B` / `PYTHONDONTWRITEBYTECODE` so its own runs never cache bytecode, but a stale user-written `__pycache__` (same size, same mtime second) could still be loaded. Consider a `--no-pycache-trust` mode that clears `__pycache__` in the dep closure before running.
-10. **Verification timeout is fixed at 300s** — should be configurable per project.
-11. **`status` recomputes impl hashes for every contract** — fine at 20 contracts, O(n) file reads at 2,000. Cache by (path, mtime, size).
-12. **Contract names are global** — no namespacing/packages; collisions across folders are unhandled (one `contracts/` dir per project for now).
-13. **Concurrent writers** — sqlite handles it, but two agents calling `put_contract` on the same name race on the YAML file write.
-14. **Name finalization** — "heddle" is a working name; rename is a find-and-replace.
+10. **`status` recomputes impl hashes for every contract** — fine at 20 contracts, O(n) file reads at 2,000. Cache by (path, mtime, size).
+11. **Contract names are global** — no namespacing/packages; collisions across folders are unhandled (one `contracts/` dir per project for now).
+12. **Concurrent writers** — sqlite handles it, but two agents calling `put_contract` on the same name race on the YAML file write.
+13. **Name finalization** — "heddle" is a working name; rename is a find-and-replace.
