@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -22,6 +23,30 @@ from .implhash import impl_hash
 from .store import Store
 
 SUMMARY_MAX_TOKENS = 40
+
+# directories whose bytecode is not the project's regenerable weft — never nuked
+_PYCACHE_SKIP = frozenset({".venv", "venv", ".heddle", "site-packages", ".git", ".tox", "node_modules"})
+
+
+def clear_pycache(root: Path) -> int:
+    """Remove project __pycache__ dirs so a verify run can't load stale bytecode.
+
+    Prunes virtualenvs, the store, and VCS/vendor dirs from the walk — only the
+    project's own regenerable bytecode is cleared, and a big .venv is never
+    traversed. Returns the number of dirs removed.
+    """
+    removed = 0
+    for dirpath, dirnames, _ in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in _PYCACHE_SKIP]  # don't descend into them
+        if "__pycache__" in dirnames:
+            pc = Path(dirpath) / "__pycache__"
+            if pc.is_symlink():
+                pc.unlink()  # detach the link so its stale cache can't be loaded; leave the target
+            else:
+                shutil.rmtree(pc, ignore_errors=True)
+            dirnames.remove("__pycache__")  # already gone; don't descend
+            removed += 1
+    return removed
 
 
 def verification_key(store: Store, name: str, ihash: str) -> str:

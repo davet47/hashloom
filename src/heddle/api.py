@@ -16,7 +16,7 @@ from .errors import HeddleError, unknown_name
 from .implhash import impl_hash
 from .project import atomic_write_text, contract_lock, contract_path
 from .store import Store
-from .verify import verification_key, verify_one
+from .verify import clear_pycache, verification_key, verify_one
 
 
 # responses carry 12-hex-char hashes — plenty to compare against, a quarter of
@@ -106,10 +106,13 @@ def verify(
     names: str | list[str],
     python: str | None = None,
     timeout: int | float | None = None,
+    pycache_trust: bool = True,
 ) -> dict:
     """Per-unit cached-pass / pass / fail. Runs pytest only on cache misses."""
     if isinstance(names, str):
         names = [names]
+    if not pycache_trust:
+        clear_pycache(root)  # once per batch, before any pytest run
     results = []
     for name in names:
         try:

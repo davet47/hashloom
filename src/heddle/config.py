@@ -94,3 +94,22 @@ def resolve_timeout(root: Path) -> int | float:
     if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
         raise HeddleError("bad_config", f"verify_timeout must be a positive number, got {value!r}")
     return value
+
+
+def resolve_pycache_trust(root: Path, override: bool | None = None) -> bool:
+    """Whether verify may trust pre-existing __pycache__ (default True).
+
+    The runner already passes -B / PYTHONDONTWRITEBYTECODE so its own runs never
+    write bytecode, but a stale user-written .pyc that happens to share the
+    source's size and mtime-second could still be loaded. Set `pycache_trust:
+    false` in .heddle/config.json (or pass `--no-pycache-trust`) to clear the
+    project's bytecode caches before each verify run instead.
+    """
+    if override is not None:
+        return override
+    value = load_config(root).get("pycache_trust")
+    if value is None:
+        return True
+    if not isinstance(value, bool):
+        raise HeddleError("bad_config", f"pycache_trust must be true or false, got {value!r}")
+    return value

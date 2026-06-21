@@ -13,17 +13,20 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from . import api, tokens
-from .config import resolve_python, resolve_timeout
+from .config import resolve_pycache_trust, resolve_python, resolve_timeout
 from .errors import HeddleError
 from .project import db_path, find_root
 from .store import Store
 
 
-def build_server(root: Path | None = None, python: str | None = None) -> FastMCP:
+def build_server(
+    root: Path | None = None, python: str | None = None, pycache_trust: bool | None = None
+) -> FastMCP:
     root = find_root(root)
     store = Store(db_path(root))
     interp = resolve_python(root, override=python)  # resolved once per session
     timeout = resolve_timeout(root)
+    trust = resolve_pycache_trust(root, override=pycache_trust)
     mcp = FastMCP("heddle")
 
     def _respond(tool: str, fn) -> dict:
@@ -62,7 +65,10 @@ def build_server(root: Path | None = None, python: str | None = None) -> FastMCP
         cached-pass / pass / fail with a ≤40-token failure summary. Runs
         pytest only for units whose (contract, impl, deps) hash key is not
         already green in the cache."""
-        return _respond("verify", lambda: api.verify(root, store, names, python=interp, timeout=timeout))
+        return _respond(
+            "verify",
+            lambda: api.verify(root, store, names, python=interp, timeout=timeout, pycache_trust=trust),
+        )
 
     @mcp.tool()
     def status() -> dict:
@@ -73,5 +79,5 @@ def build_server(root: Path | None = None, python: str | None = None) -> FastMCP
     return mcp
 
 
-def serve(root: Path | None = None, python: str | None = None) -> None:
-    build_server(root, python=python).run()  # stdio transport
+def serve(root: Path | None = None, python: str | None = None, pycache_trust: bool | None = None) -> None:
+    build_server(root, python=python, pycache_trust=pycache_trust).run()  # stdio transport

@@ -93,7 +93,10 @@ globally-installed heddle can verify a project against its own virtualenv withou
 being installed into it; `heddle status` shows which interpreter it resolved.
 
 `.heddle/config.json` also takes `verify_timeout` (seconds per pytest run,
-default 300) for suites that need longer than the default.
+default 300) for suites that need longer than the default, and `pycache_trust`
+(default `true`); set `pycache_trust: false` — or pass `--no-pycache-trust` — to
+clear the project's `__pycache__` before each verify run, so a stale `.pyc` can
+never shadow the current source.
 
 ## CLI
 

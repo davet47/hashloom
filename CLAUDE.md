@@ -62,11 +62,6 @@ message)` for anything an agent should see. Keep it that way.
 So heddle can verify a target project against *its own* venv without being
 installed into it. `heddle status` reports the resolved interpreter.
 
-## "heddle" is a working name
-
-A rename is a find-and-replace. Don't entrench the name in ways that make that
-hard.
-
 ## How to run
 
 ```bash

@@ -21,6 +21,11 @@ def main(argv: list[str] | None = None) -> int:
         metavar="PATH",
         help="interpreter to run pytest with (default: project .venv, else this interpreter)",
     )
+    serve_parser.add_argument(
+        "--no-pycache-trust",
+        action="store_true",
+        help="clear project __pycache__ before each verify run (don't trust stale bytecode)",
+    )
     sub.add_parser("status", help="dirty contracts, stale verifications, cache hit-rate, token counters")
     verify_parser = sub.add_parser("verify", help="run cached verification for one or more contracts")
     verify_parser.add_argument("names", nargs="+", metavar="NAME", help="contract names to verify")
@@ -28,6 +33,11 @@ def main(argv: list[str] | None = None) -> int:
         "--python",
         metavar="PATH",
         help="interpreter to run pytest with (default: project .venv, else this interpreter)",
+    )
+    verify_parser.add_argument(
+        "--no-pycache-trust",
+        action="store_true",
+        help="clear project __pycache__ before running (don't trust stale bytecode)",
     )
     args = parser.parse_args(argv)
 
@@ -46,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "serve":
             from .server import serve
 
-            serve(root, python=args.python)
+            serve(root, python=args.python, pycache_trust=False if args.no_pycache_trust else None)
             return 0
 
         from .store import Store
@@ -62,8 +72,10 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(api.status(root, store), indent=2))
         elif args.command == "verify":
             from . import api
+            from .config import resolve_pycache_trust
 
-            result = api.verify(root, store, args.names, python=args.python)
+            trust = resolve_pycache_trust(root, override=False if args.no_pycache_trust else None)
+            result = api.verify(root, store, args.names, python=args.python, pycache_trust=trust)
             print(json.dumps(result, indent=2))
             # nonzero if any unit failed or errored — usable as a CI/pre-commit gate
             if any(r["status"] in ("fail", "error") for r in result["results"]):
