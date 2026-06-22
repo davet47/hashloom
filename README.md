@@ -2,11 +2,33 @@
 
 [![CI](https://github.com/davet47/heddle/actions/workflows/ci.yml/badge.svg)](https://github.com/davet47/heddle/actions/workflows/ci.yml)
 
-**Hash-keyed verification caching and content-addressed contracts for spec-driven development.** An MCP server that makes agent regeneration loops cheap.
+**Heddle treats software units as content-addressed contracts rather than files.** An MCP server that makes agent regeneration loops cheap.
 
-The heddle is the part of a loom that holds the warp threads — the fixed, durable strands — while the shuttle weaves disposable weft through them. **Contracts are warp. Code is weft.**
+Because contracts are content-addressed and dependency-aware, agents reuse verification, compute blast radius precisely, and regenerate code from a few hundred tokens of context instead of re-reading whole files. Build systems ask which files changed. Heddle asks which software obligations changed.
 
-## The number
+The heddle is the part of a loom that holds the warp threads, the fixed, durable strands, while the shuttle weaves disposable weft through them. **Contracts are warp. Code is weft.**
+
+## The problem
+
+Agents repeatedly pay to rediscover software structure. Spec-driven development tools made specs the durable artifact and code regenerable, but they run on plain files, so every regeneration loop re-derives what the project already knows:
+
+1. **Context acquisition is expensive.** Regenerating one unit means re-reading whole spec and source files: thousands of tokens to learn what a few hundred convey.
+2. **Verification is uncached.** Every regeneration re-runs (and re-reads the output of) the full relevant test surface, even for units whose contracts haven't changed.
+3. **Blast radius is by convention, not mechanism.** When a spec changes, nothing tells the agent precisely which dependents are invalidated.
+
+## The model
+
+Heddle treats each software unit as a content-addressed contract with explicit dependencies, not a file. A contract is a small YAML spec (signature, invariants, examples, dependency names); the implementation behind it is regenerable weft. Because every contract is hashed and its dependencies are named, the structure an agent keeps re-deriving from files becomes something heddle computes once and serves.
+
+## Outcomes
+
+The model buys three things, all mechanical:
+
+- **Verification caching.** A green test result is keyed on the contract, implementation, and dependency hashes, and served from cache until one of them changes. pytest runs only on a real miss.
+- **Mechanical blast radius.** A contract change reports the exact set of invalidated dependents, transitively and by hash, not by convention.
+- **Tiny context packets.** An agent regenerating a unit gets the contract, its dependencies' signatures, and its callers as one packet of a few hundred tokens, instead of the whole file closure.
+
+### The number
 
 Same three regeneration tasks on a 20-contract sample project, once with raw file reads, once through heddle (tiktoken cl100k, reproduce with `uv run python bench/benchmark.py`):
 
@@ -17,17 +39,7 @@ Same three regeneration tasks on a 20-contract sample project, once with raw fil
 | revenue_by_category |     1,942 |    392 |      5.0x |
 | **total**           | **6,004** | **1,097** | **5.5x** |
 
-Raw mode counts what a file-based agent reads per task: the unit's spec file, every transitive dep's spec file, every source module in the dep closure, the unit's test file, and the output of running the suite. It is deliberately generous to the baseline — it assumes the agent already knows the exact dependency closure, which is precisely the thing heddle computes for you.
-
-## Why
-
-Spec-driven development tools made specs the durable artifact and code regenerable — but they run on plain files:
-
-1. **Context acquisition is expensive.** Regenerating one unit means re-reading whole spec and source files: thousands of tokens to learn what a few hundred convey.
-2. **Verification is uncached.** Every regeneration re-runs (and re-reads the output of) the full relevant test surface, even for units whose contracts haven't changed.
-3. **Blast radius is by convention, not mechanism.** When a spec changes, nothing tells the agent precisely which dependents are invalidated.
-
-Heddle fixes this with a content-addressed contract store and a hash-keyed verification cache, exposed over MCP so any agent workflow can use it.
+Raw mode counts what a file-based agent reads per task: the unit's spec file, every transitive dep's spec file, every source module in the dep closure, the unit's test file, and the output of running the suite. It is deliberately generous to the baseline: it assumes the agent already knows the exact dependency closure, which is precisely the thing heddle computes for you.
 
 ## Quickstart
 
@@ -70,11 +82,17 @@ Subdirectories are namespaces: `contracts/billing/invoice.yaml` is the contract
 `billing/invoice`, so the same short name can live in different folders. A
 contract's `name` must match its path under `contracts/`.
 
+### When to write a contract
+
+A contract belongs on a stable seam: an interface other units depend on and that you expect to outlive its current implementation. The implementation behind it is disposable weft, regenerated freely. Dropping a contract where it does not earn that place is correct use, not a failure. The failure mode is the opposite, over-pinning interiors you would happily rewrite, which turns the durable layer into busywork.
+
+Contracts are reviewed artifacts. Authoring one is cheap and getting cheaper, so the real cost is reviewing it, not writing it. A wrong contract is worse than no contract, because the durable artifact now lies: agents will regenerate code to satisfy a spec that is itself incorrect. Review a contract the way you review an interface, not the way you skim generated code.
+
 ### Hashing semantics
 
-- **Contract hash** — sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, invariant/example order preserved (order is meaning), dep order ignored. `impl` and `tests` are excluded: **relocating files never invalidates.**
-- **Impl hash** — sha256 over the normalised AST of the implementation, so reformatting and comment edits never bust the cache. Docstrings are stripped too.
-- **Verification key** — `(contract hash, impl hash, transitive dep contract hashes)`. A cached green result is served iff the full key matches; an edit to any contract in the closure forces a re-run. Failures are never served from cache.
+- **Contract hash**: sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, invariant/example order preserved (order is meaning), dep order ignored. `impl` and `tests` are excluded, so **relocating files never invalidates.**
+- **Impl hash**: sha256 over the normalised AST of the implementation, so reformatting and comment edits never bust the cache. Docstrings are stripped too.
+- **Verification key**: `(contract hash, impl hash, transitive dep contract hashes)`. Heddle caches verification results, not correctness: a cached green result is served iff the full key matches, and an edit to any contract in the closure forces a re-run. Failures are never served from cache. Two caveats are worth knowing. A cached pass assumes deterministic tests, so a green result that depended on wall-clock time, network, or randomness can outlive the condition that made it pass. And test source is not yet part of the key, so editing a test body without touching the contract or impl does not by itself force a re-run (see [Roadmap](ROADMAP.md)).
 
 ## MCP tools (the entire surface)
 
