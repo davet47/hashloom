@@ -32,9 +32,9 @@ roadmap — worth its own design pass before any code.
 
 ### Sharpening the verification model
 
-Direction toward stronger correctness guarantees, so the README can eventually
-claim more than "caches verification results." All three are filed as issues, not
-built:
+Direction toward a sharper verification model along two axes, soundness and
+precision, so the README can eventually claim more than "caches verification
+results." All three are filed as issues, not built:
 
 - **Test source in the verification key** ([#18](https://github.com/davet47/heddle/issues/18)).
   Today the key is `(contract, impl, dep contract hashes)`, so a test-body edit
@@ -42,7 +42,9 @@ built:
   precondition for any "caches correctness" language.
 - **Invariants out of the binding hash** ([#19](https://github.com/davet47/heddle/issues/19)).
   Invariants are prose but currently sit inside the contract hash, so a reword
-  cascades a re-verify across dependents. Minimise the hashed prose surface.
+  cascades a re-verify across dependents. This is a precision fix, not a
+  soundness one (it removes spurious re-verification, unlike #18 which closes a
+  stale-green hole). Minimise the hashed prose surface.
 - **Semantic necessity rate in `status`** ([#20](https://github.com/davet47/heddle/issues/20)).
   Count contract edits that busted the hash but changed zero verification
   outcomes, to measure how much re-verification is necessary versus cosmetic.

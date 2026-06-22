@@ -90,7 +90,7 @@ Contracts are reviewed artifacts. Authoring one is cheap and getting cheaper, so
 
 ### Hashing semantics
 
-- **Contract hash**: sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, invariant/example order preserved (order is meaning), dep order ignored. `impl` and `tests` are excluded, so **relocating files never invalidates.**
+- **Contract hash**: sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, invariant and example order preserved, dep order ignored. `impl` and `tests` are excluded, so **relocating files never invalidates.** Invariants are free text and live inside this hash, so rewording one without changing its meaning still moves the contract hash and re-verifies every dependent. Behaviour-equivalent prose edits are not free yet (see [Roadmap](https://github.com/davet47/heddle/blob/main/ROADMAP.md)).
 - **Impl hash**: sha256 over the normalised AST of the implementation, so reformatting and comment edits never bust the cache. Docstrings are stripped too.
 - **Verification key**: `(contract hash, impl hash, transitive dep contract hashes)`. Heddle caches verification results, not correctness: a cached green result is served iff the full key matches, and an edit to any contract in the closure forces a re-run. Failures are never served from cache. Two caveats are worth knowing. A cached pass assumes deterministic tests, so a green result that depended on wall-clock time, network, or randomness can outlive the condition that made it pass. And test source is not yet part of the key, so editing a test body without touching the contract or impl does not by itself force a re-run (see [Roadmap](ROADMAP.md)).
 
