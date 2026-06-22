@@ -36,7 +36,7 @@ def _load(store: Store, name: str) -> tuple[dict, str]:
 
 
 def get_contract(root: Path, store: Store, name: str) -> dict:
-    """The ~100-token context packet: contract + hash + dep signatures + callers."""
+    """The ~300-token context packet: contract + hash + dep signatures + callers."""
     data, chash = _load(store, name)
     deps = []
     for dep in data.get("deps", []):
