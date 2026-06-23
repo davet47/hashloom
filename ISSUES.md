@@ -14,7 +14,7 @@ the GitHub tracker once the repo has a remote.
 
 ## Known limitations / follow-ups
 
-7. **PyPI release** — `pip install heddle` in the README assumes publication; cut 0.1.0 to PyPI.
+7. **PyPI release** — `pip install heddle-mcp` in the README assumes publication; cut 0.1.0 to PyPI (the bare `heddle` name is held by a third-party placeholder, so the distribution name is `heddle-mcp`).
 8. **README gif** — record the Claude Code → heddle demo loop.
 9. **Pre-existing stale bytecode** — the verification runner passes `-B` / `PYTHONDONTWRITEBYTECODE` so its own runs never cache bytecode, but a stale user-written `__pycache__` (same size, same mtime second) could still be loaded. Consider a `--no-pycache-trust` mode that clears `__pycache__` in the dep closure before running.
 10. **Name finalization** — "heddle" is a working name; rename is a find-and-replace.

@@ -1,5 +1,5 @@
 [project]
-name = "heddle"
+name = "heddle-mcp"  # PyPI distribution name; import name and CLI stay `heddle`
 dynamic = ["version"]  # single-sourced from src/heddle/__init__.py
 description = "Hash-keyed verification caching and content-addressed contracts for spec-driven development, over MCP."
 readme = "README.md"

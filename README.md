@@ -44,7 +44,7 @@ Raw mode counts what a file-based agent reads per task: the unit's spec file, ev
 ## Quickstart
 
 ```bash
-pip install heddle
+pip install heddle-mcp
 # or from source: pip install "git+https://github.com/davet47/heddle"
 
 cd your-project

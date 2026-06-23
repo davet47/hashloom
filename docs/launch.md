@@ -35,7 +35,7 @@ discussions. Honest and hype-free; the number does the selling.
 > commands — the README is the entire surface. The name's from weaving: contracts
 > are the fixed **warp**, code is the **weft** woven through.
 >
-> `pip install heddle` · https://github.com/davet47/heddle
+> `pip install heddle-mcp` · https://github.com/davet47/heddle
 
 ---
 
