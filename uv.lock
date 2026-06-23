@@ -337,7 +337,7 @@ wheels = [
 ]
 
 [[package]]
-name = "heddle"
+name = "heddle-mcp"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
