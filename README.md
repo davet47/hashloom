@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/davet47/heddle/actions/workflows/ci.yml/badge.svg)](https://github.com/davet47/heddle/actions/workflows/ci.yml)
 
+![heddle regenerating a unit: one ~300-token context packet plus a cached verification, instead of re-reading whole files](https://raw.githubusercontent.com/davet47/heddle/main/docs/demo.gif)
+
 **Heddle treats software units as content-addressed contracts rather than files.** An MCP server that makes agent regeneration loops cheap.
 
 Because contracts are content-addressed and dependency-aware, agents reuse verification, compute blast radius precisely, and regenerate code from a few hundred tokens of context instead of re-reading whole files. Build systems ask which files changed. Heddle asks which software obligations changed.

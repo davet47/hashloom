@@ -37,8 +37,13 @@ rm -rf .heddle && heddle init && heddle index
 ```bash
 heddle verify revenue_by_region        # scene 6: pass  (runs pytest)
 heddle verify revenue_by_region        # scene 7: cached-pass
-heddle status                          # scene 8: token counters + resolved interpreter
+heddle status                          # scene 8: cache hit-rate + resolved interpreter
 ```
+
+The CLI mirror covers scenes 6 and 7 faithfully, but `heddle status` on the CLI
+reports `tokens: 0`: the token counters are incremented only by the MCP server
+(`src/heddle/server.py`), so scene 8's token-counter payoff needs the Claude Code
+(MCP) path, not this mirror.
 
 ## Captions (one line each, ≥1.5 s on screen)
 - Contracts are the durable warp; code is regenerable weft.
@@ -48,8 +53,11 @@ heddle status                          # scene 8: token counters + resolved inte
 - 5.5× fewer tokens, verified.
 
 ## Recording tips
-- Scene 2's benchmark rebuilds and warms `examples/sales/.heddle`. To show a real
-  `pass` in scene 6, re-run `rm -rf .heddle && heddle index` after scene 2 so the
-  cache is cold; scene 7 then reuses it.
+- Scene 2's benchmark rebuilds and warms `examples/sales/.heddle`, so don't wipe
+  the store after it. Scene 5's edit to `src/revenue.py::revenue_by_region` busts
+  only that unit's impl hash, so scene 6 verifies it cold (a real pytest `pass`),
+  scene 7 reuses the cache, and scene 8's `status` stays clean (`dirty: 0`).
+  Re-indexing the whole store instead leaves every other contract `dirty` and
+  makes scene 8 a wall of red.
 - Trim dead time between commands; end on the `status` counters or the benchmark
   table — the number is the hook.
