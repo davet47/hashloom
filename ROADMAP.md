@@ -56,8 +56,11 @@ results."
 ## v0.3+ — bigger bets
 
 - **Multi-language** — a normalised-AST hasher + a test-runner adapter per
-  language (Go and TypeScript first). The biggest expansion; each language is
-  real work. The v0.1 interpreter-resolution and runner seams are the foundation.
+  language, behind a per-language adapter seam chosen by the impl extension.
+  ✓ **Go shipped** (stdlib `go/ast` hash + `go test -json`); Python is the
+  default. **TypeScript is next** (~a focused day; the hand-written canonical AST
+  serializer is the bulk, since TS has no `ast.dump`). Each further language is
+  real work.
 - **Tessl spec-format compatibility** — an import/export adapter, once that format
   is stable.
 
@@ -82,8 +85,19 @@ project avoids "scope creep toward Loom." Keep the surface minimal: 5 MCP tools,
 
 ## Suggested sequencing
 
-1. ✓ **v0.1 shipped** (0.1.0 on PyPI, demo gif live). Remaining: post the launch announcements ([docs/launch.md](docs/launch.md)).
-2. **Semantic diff**: quick win, proves the v0.2 motion.
-3. **Content-addressed impl store**: the enabler.
-4. **Hosted store**: the big one (design pass first).
-5. **Multi-language**: a v0.3 milestone of its own.
+Shipped: v0.1 (PyPI, demo gif, announcements); v0.2 (semantic diff,
+content-addressed impl store, the `Store` interface, the shared-cache MVP); the
+first **Go** adapter; and the verification-model sharpening (#18, #19, #20).
+Next, in rough order:
+
+1. **TypeScript adapter**: the second language (~a focused day; the hand-written
+   AST serializer dominates, the Go adapter seam is reused).
+2. **Hosted-store server**: turn the `LayeredStore` MVP into a real shared
+   backend (transport, auth, cross-graph invalidation); design in
+   [docs/hosted-store.md](docs/hosted-store.md).
+3. **Tessl compatibility**, and the post-launch error-code naming convention
+   (`bad_*` vs `invalid_*`).
+
+Housekeeping: soften the round "5.5x" figures in docs/demo.md, docs/launch.md,
+and CLAUDE.md to "5x+" (the benchmark is 5.4x now and re-stales on any hash
+change); delete merged feature branches.
