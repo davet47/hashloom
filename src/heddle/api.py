@@ -184,6 +184,7 @@ def status(root: Path, store: Store) -> dict:
     c = store.counters()
     hits, misses = c.get("cache_hits", 0), c.get("cache_misses", 0)
     total = hits + misses
+    br, bru = c.get("bust_rechecks", 0), c.get("bust_rechecks_unchanged", 0)
     tokens_by_tool = {k.removeprefix("tokens."): v for k, v in c.items() if k.startswith("tokens.")}
     return {
         "contracts": len(store.contract_names()),
@@ -194,6 +195,13 @@ def status(root: Path, store: Store) -> dict:
             "hits": hits,
             "misses": misses,
             "hit_rate": round(hits / total, 3) if total else None,
+        },
+        # re-verifications triggered by a contract-hash bust, and how many changed
+        # no verdict (wasted work); wasted_rate falls once invariants leave the hash
+        "rechecks": {
+            "after_change": br,
+            "verdict_unchanged": bru,
+            "wasted_rate": round(bru / br, 3) if br else None,
         },
         "tokens": {"total": sum(tokens_by_tool.values()), "by_tool": tokens_by_tool},
     }

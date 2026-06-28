@@ -51,6 +51,7 @@ class Store(Protocol):
     # verifications
     def record_verification(self, key: str, contract_name: str, status: str, summary: str) -> None: ...
     def get_verification(self, key: str) -> dict | None: ...
+    def last_verification(self, contract_name: str) -> dict | None: ...
     def mark_stale(self, contract_names: list[str]) -> int: ...
     def stale_verifications(self) -> list[str]: ...
 
@@ -233,6 +234,13 @@ class SqliteStore:
 
     def get_verification(self, key: str) -> dict | None:
         return _row(self._conn.execute("SELECT * FROM verifications WHERE key=?", (key,)))
+
+    def last_verification(self, contract_name: str) -> dict | None:
+        """The most recent verification row for a contract, across keys."""
+        return _row(self._conn.execute(
+            "SELECT * FROM verifications WHERE contract_name=? ORDER BY ran_at DESC, rowid DESC LIMIT 1",
+            (contract_name,),
+        ))
 
     def mark_stale(self, contract_names: list[str]) -> int:
         if not contract_names:

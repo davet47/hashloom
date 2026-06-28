@@ -133,5 +133,13 @@ def verify_one(
     store.incr("test_runs")
     ok, summary = adapter.run_tests(root, data["tests"], toolchain, budget)
     status = "pass" if ok else "fail"
+    # #20: a re-verify answering a bust (the prior row is stale) whose verdict did
+    # not change is wasted re-verification; track it to measure the payoff of
+    # pulling prose invariants out of the hash (#19)
+    prior = store.last_verification(name)
+    if prior is not None and prior["stale"]:
+        store.incr("bust_rechecks")
+        if prior["status"] == status:
+            store.incr("bust_rechecks_unchanged")
     store.record_verification(key, name, status, summary)
     return {"name": name, "status": status, "summary": summary, "key": key}

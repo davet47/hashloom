@@ -134,3 +134,22 @@ def test_status_reports_dirty_and_hit_rate(project):
     assert s["dirty"] == []
     assert s["cache"]["hits"] == 1 and s["cache"]["misses"] == 2
     assert s["contracts"] == 3
+
+
+def test_status_reports_wasted_rechecks(project):
+    root, store = project
+    api.verify(root, store, ["total", "report"])  # both green
+    # change Item's contract signature: busts total/report keys (Item's hash is in
+    # them) but the real code is unchanged, so both still pass -> wasted rechecks
+    write_contract(root, "Item", """
+        name: Item
+        signature: "dataclass: value: float, ok: bool, extra: int"
+        invariants:
+          - value may be any float
+    """)
+    index(root, store)
+    assert statuses(api.verify(root, store, ["total", "report"])) == {"total": "pass", "report": "pass"}
+    rc = api.status(root, store)["rechecks"]
+    assert rc["after_change"] == 2
+    assert rc["verdict_unchanged"] == 2
+    assert rc["wasted_rate"] == 1.0
