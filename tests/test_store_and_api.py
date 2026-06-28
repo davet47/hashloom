@@ -113,14 +113,17 @@ def test_contract_removal_reindexes(project):
 
 def test_status_caches_impl_hashes(project, monkeypatch):
     root, store = project
+    from heddle import implhash
+
     calls = {"n": 0}
-    real = api.impl_hash
+    real = implhash.impl_hash
 
     def counting(*a, **k):
         calls["n"] += 1
         return real(*a, **k)
 
-    monkeypatch.setattr(api, "impl_hash", counting)
+    # the Python adapter calls implhash.impl_hash; patch it there
+    monkeypatch.setattr(implhash, "impl_hash", counting)
     api.status(root, store)
     first = calls["n"]
     assert first == 2  # total and report have impls; Item is spec-only

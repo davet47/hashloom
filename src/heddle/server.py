@@ -13,7 +13,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from . import api, tokens
-from .config import resolve_pycache_trust, resolve_python, resolve_timeout
+from .config import resolve_pycache_trust, resolve_timeout
 from .errors import HeddleError
 from .project import db_path, find_root
 from .store import SqliteStore
@@ -24,7 +24,8 @@ def build_server(
 ) -> FastMCP:
     root = find_root(root)
     store = SqliteStore(db_path(root))
-    interp = resolve_python(root, override=python)  # resolved once per session
+    # the toolchain override is resolved per-language inside verify_one, so a
+    # project can mix Python and Go contracts
     timeout = resolve_timeout(root)
     trust = resolve_pycache_trust(root, override=pycache_trust)
     mcp = FastMCP("heddle")
@@ -67,7 +68,7 @@ def build_server(
         already green in the cache."""
         return _respond(
             "verify",
-            lambda: api.verify(root, store, names, python=interp, timeout=timeout, pycache_trust=trust),
+            lambda: api.verify(root, store, names, python=python, timeout=timeout, pycache_trust=trust),
         )
 
     @mcp.tool()

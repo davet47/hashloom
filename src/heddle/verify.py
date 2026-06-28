@@ -17,12 +17,10 @@ from pathlib import Path
 import yaml
 
 from . import tokens
-from .config import resolve_python, resolve_timeout
+from .config import resolve_timeout
 from .errors import HeddleError, unknown_name
-from .implhash import impl_hash, test_source_hash
+from .langs import SUMMARY_MAX_TOKENS, adapter_for
 from .store import Store
-
-SUMMARY_MAX_TOKENS = 40
 
 # directories whose bytecode is not the project's regenerable weft — never nuked
 _PYCACHE_SKIP = frozenset({".venv", "venv", ".heddle", "site-packages", ".git", ".tox", "node_modules"})
@@ -103,11 +101,10 @@ def verify_one(
 ) -> dict:
     """Verify a single contract. Returns {name, status, summary, key}.
 
-    `python` is the interpreter to run pytest with and `timeout` its per-run
-    budget; both resolve lazily from the project when None, so direct callers
-    (CLI, benchmark, tests) need not pass them.
+    The language adapter (chosen by the impl's file extension) hashes the impl
+    and tests and runs the tests. `python` is the toolchain override and
+    `timeout` the per-run budget; both resolve lazily when None.
     """
-    interp = python or resolve_python(root)
     budget = timeout if timeout is not None else resolve_timeout(root)
     row = store.get_contract(name)
     if row is None:
@@ -117,11 +114,13 @@ def verify_one(
     if "impl" not in data:
         raise HeddleError("no_impl", f"'{name}' is spec-only (no impl) — nothing to verify", contract=name)
     if not data.get("tests"):
-        raise HeddleError("no_tests", f"'{name}' has an impl but no tests — add pytest node IDs", contract=name)
+        raise HeddleError("no_tests", f"'{name}' has an impl but no tests — add test node IDs", contract=name)
 
-    ihash = impl_hash(root, data["impl"], contract=name)  # always fresh from disk
+    adapter = adapter_for(data["impl"])
+    toolchain = adapter.resolve_toolchain(root, override=python)
+    ihash = adapter.impl_hash(root, data["impl"], contract=name)  # always fresh from disk
     store.upsert_impl(name, ihash, data["impl"].partition("::")[0])
-    thash = test_source_hash(root, data["tests"])  # test source is part of the key (#18)
+    thash = adapter.test_source_hash(root, data["tests"])  # test source is part of the key (#18)
     key = verification_key(store, name, ihash, thash)
 
     store.incr("verify_requests")
@@ -132,12 +131,7 @@ def verify_one(
 
     store.incr("cache_misses")
     store.incr("test_runs")
-    ok, out = _run_pytest(root, data["tests"], interp, budget)
-    if ok:
-        summary = ""
-        store.record_verification(key, name, "pass", summary)
-        return {"name": name, "status": "pass", "summary": summary, "key": key}
-
-    summary = _failure_summary(out)
-    store.record_verification(key, name, "fail", summary)
-    return {"name": name, "status": "fail", "summary": summary, "key": key}
+    ok, summary = adapter.run_tests(root, data["tests"], toolchain, budget)
+    status = "pass" if ok else "fail"
+    store.record_verification(key, name, status, summary)
+    return {"name": name, "status": status, "summary": summary, "key": key}
