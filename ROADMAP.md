@@ -74,7 +74,6 @@ the packaging metadata.
 
 Still open (post-launch):
 
-- `CHANGELOG.md` and `CONTRIBUTING.md` + issue templates.
 - A single error-code naming convention (`bad_*` vs `invalid_*`).
 
 ## Explicitly not doing
@@ -97,7 +96,3 @@ Next, in rough order:
    [docs/hosted-store.md](docs/hosted-store.md).
 3. **Tessl compatibility**, and the post-launch error-code naming convention
    (`bad_*` vs `invalid_*`).
-
-Housekeeping: soften the round "5.5x" figures in docs/demo.md, docs/launch.md,
-and CLAUDE.md to "5x+" (the benchmark is 5.4x now and re-stales on any hash
-change); delete merged feature branches.

@@ -23,7 +23,7 @@ text and raw URLs auto-link. Paste it as-is.
 >
 > That buys three things. Verification caching: a green result is keyed on the contract, implementation, and dependency hashes and served from cache until one of them changes, so pytest runs only on a real miss. Precise blast radius: a contract change reports exactly which dependents it invalidates, by hash. And tiny context packets: to re-implement a unit, an agent asks heddle for a ~300-token packet (the spec, its dependencies' signatures, and its callers) instead of re-reading whole files.
 >
-> On a 20-contract sample, three regeneration tasks cost 5.5x fewer tokens through heddle than reading raw files. The baseline is deliberately generous: it assumes the agent already knows the exact dependency closure, which is the thing heddle computes for you.
+> On a 20-contract sample, three regeneration tasks cost 5x+ fewer tokens through heddle than reading raw files. The baseline is deliberately generous: it assumes the agent already knows the exact dependency closure, which is the thing heddle computes for you.
 >
 > v0.1 is Python-only, single-process, Apache-2.0. Five MCP tools, five CLI commands, and the README is the entire surface. The name is from weaving: contracts are the fixed warp, code is the weft woven through.
 >
@@ -51,7 +51,7 @@ text and raw URLs auto-link. Paste it as-is.
 > dependencies, and addresses those three directly: a hash-keyed verification
 > cache, a `get_dependents` blast-radius query, and a small context packet per
 > unit. It's complementary to a spec workflow rather than a replacement, so you
-> point any agent at it over MCP. Early benchmark is ~5.5x token reduction on
+> point any agent at it over MCP. Early benchmark is 5x+ token reduction on
 > regeneration tasks.
 >
 > Would love feedback on the contract format and the hashing semantics, in

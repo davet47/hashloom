@@ -24,7 +24,7 @@ rm -rf .heddle && heddle init && heddle index
 | # | On screen | Command / action | Caption | ~s |
 |---|---|---|---|---|
 | 1 | title card | — | heddle — contracts are warp, code is weft | 2 |
-| 2 | benchmark table | `uv run python bench/benchmark.py` | 5.5× fewer tokens per regeneration | 5 |
+| 2 | benchmark table | `uv run python bench/benchmark.py` | 5×+ fewer tokens per regeneration | 5 |
 | 3 | the ask | Claude Code: "re-implement `revenue_by_region`" | the agent asks heddle, not the filesystem | 3 |
 | 4 | `get_contract` | MCP `get_contract("revenue_by_region")` → packet | one ~300-token packet: spec + dep signatures + callers | 5 |
 | 5 | the weave | agent edits `src/revenue.py::revenue_by_region` | it weaves the weft | 4 |
@@ -50,7 +50,7 @@ reports `tokens: 0`: the token counters are incremented only by the MCP server
 - Regenerating a unit usually means re-reading whole spec + source files.
 - heddle serves the exact dependency closure as one small packet …
 - … and a cached pass/fail instead of re-running the suite.
-- 5.5× fewer tokens, verified.
+- 5×+ fewer tokens, verified.
 
 ## Recording tips
 - Scene 2's benchmark rebuilds and warms `examples/sales/.heddle`, so don't wipe

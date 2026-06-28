@@ -27,7 +27,7 @@ documents "the entire surface"; if a change would add to it, stop and confirm.
 ## Definition of done: >5x token reduction
 
 `bench/benchmark.py` is the DoD guard — it exits nonzero below 5x (currently
-5.5x). Run it for anything that could touch the context packets or hashing.
+5x+). Run it for anything that could touch the context packets or hashing.
 **Never regress it.**
 
 ## Hash stability is load-bearing
