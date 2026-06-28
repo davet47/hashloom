@@ -55,9 +55,8 @@ results."
 ## v0.3+ — bigger bets
 
 - **Multi-language** — a normalised-AST hasher + a test-runner adapter per
-  language, behind a per-language adapter seam chosen by the impl extension.
-  ✓ **Go shipped** (stdlib `go/ast` hash + `go test -json`); Python stays the
-  default. **TypeScript is next.** Each further language is real work.
+  language (Go and TypeScript first). The biggest expansion; each language is
+  real work. The v0.1 interpreter-resolution and runner seams are the foundation.
 - **Tessl spec-format compatibility** — an import/export adapter, once that format
   is stable.
 
@@ -86,4 +85,4 @@ project avoids "scope creep toward Loom." Keep the surface minimal: 5 MCP tools,
 2. **Semantic diff**: quick win, proves the v0.2 motion.
 3. **Content-addressed impl store**: the enabler.
 4. **Hosted store**: the big one (design pass first).
-5. **Multi-language**: Go shipped; TypeScript next.
+5. **Multi-language**: a v0.3 milestone of its own.

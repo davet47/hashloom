@@ -10,7 +10,7 @@ launch follow-ups, with status as of the 0.1.0 release (shipped 2026-06-23).
 
 ## Deferred by design (spec non-goals)
 
-1. **Multi-language support**: no longer deferred, now in progress. A per-language adapter seam (chosen by the impl extension) landed with the **Go** adapter (stdlib `go/ast` hash + `go test -json`); Python stays the default. TypeScript is next. See ROADMAP.
+1. **Multi-language support**: v0.1 is Python-only (AST hashing and pytest runner are Python-specific). Each language needs a normalised-AST hasher and a test-runner adapter. (v0.3+, see ROADMAP.)
 2. **Content-addressed implementation store**: implementations remain plain files on disk; only their hashes live in the store. (v0.2 enabler, see ROADMAP.)
 3. **Hosted / team-shared store**: single-process, single sqlite file for now. The shared verification cache is the v0.2 theme (see ROADMAP).
 4. **Semantic diff rendering**: `put_contract` reports *that* a contract changed and who is invalidated, not a pretty diff of *what* changed. (Queued for v0.2.)

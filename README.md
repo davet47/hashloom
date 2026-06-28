@@ -84,12 +84,6 @@ Subdirectories are namespaces: `contracts/billing/invoice.yaml` is the contract
 `billing/invoice`, so the same short name can live in different folders. A
 contract's `name` must match its path under `contracts/`.
 
-The example above is Python, but a contract is language-agnostic: point `impl`
-at a `.go` file and `tests` at Go test functions
-(`pkg/calc_test.go::TestTotal`) and heddle verifies it with Go's toolchain
-instead. The language is inferred from the `impl` extension; Python is the
-default.
-
 ### When to write a contract
 
 A contract belongs on a stable seam: an interface other units depend on and that you expect to outlive its current implementation. The implementation behind it is disposable weft, regenerated freely. Dropping a contract where it does not earn that place is correct use, not a failure. The failure mode is the opposite, over-pinning interiors you would happily rewrite, which turns the durable layer into busywork.
@@ -151,7 +145,7 @@ uv run pytest             # full suite; hash stability is the load-bearing suite
 uv run python bench/benchmark.py
 ```
 
-Single-process by design. Contracts can be Python or Go; the language is inferred from the `impl` file's extension. Everything not in this README is an [issue](ISSUES.md).
+Python-only and single-process by design for v0.1. Everything not in this README is an [issue](ISSUES.md).
 
 ## License
 
