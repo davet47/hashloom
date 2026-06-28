@@ -1,5 +1,10 @@
-"""SQLite store: contracts, dependency edges, impls, impl-source blobs,
-verifications, counters.
+"""The store interface and its SQLite implementation.
+
+`Store` is the backend-agnostic interface (a Protocol): contracts, dependency
+edges, impls, impl-source blobs, verifications, counters. `SqliteStore` is the
+local implementation; a shared/remote backend can satisfy the same Protocol.
+Getters return plain dicts, not `sqlite3.Row`, so the interface carries nothing
+SQLite-specific.
 
 The store is derived state — deletable and rebuildable from contracts/ at any
 time via `heddle index`.
@@ -11,6 +16,49 @@ import hashlib
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Protocol
+
+
+class Store(Protocol):
+    """Backend-agnostic store interface. `SqliteStore` is the local impl; a
+    hosted/shared backend implements the same surface."""
+
+    def close(self) -> None: ...
+
+    # contracts
+    def upsert_contract(self, name: str, chash: str, yaml_text: str) -> None: ...
+    def get_contract(self, name: str) -> dict | None: ...
+    def contract_names(self) -> list[str]: ...
+    def contract_hashes(self) -> dict[str, str]: ...
+    def delete_contract(self, name: str) -> None: ...
+
+    # edges
+    def set_deps(self, name: str, deps: list[str]) -> None: ...
+    def deps_of(self, name: str) -> list[str]: ...
+    def dependents_of(self, name: str, transitive: bool = False) -> list[str]: ...
+    def transitive_deps(self, name: str) -> list[str]: ...
+
+    # impls + content-addressed blobs
+    def upsert_impl(self, contract_name: str, impl_hash: str | None, path: str | None, blob_hash: str | None = None) -> None: ...
+    def get_impl(self, contract_name: str) -> dict | None: ...
+    def put_blob(self, content: str) -> str: ...
+    def get_blob(self, blob_hash: str) -> str | None: ...
+
+    # impl-hash cache
+    def get_cached_impl_hash(self, impl_ref: str) -> dict | None: ...
+    def put_cached_impl_hash(self, impl_ref: str, mtime_ns: int, size: int, impl_hash: str) -> None: ...
+
+    # verifications
+    def record_verification(self, key: str, contract_name: str, status: str, summary: str) -> None: ...
+    def get_verification(self, key: str) -> dict | None: ...
+    def mark_stale(self, contract_names: list[str]) -> int: ...
+    def stale_verifications(self) -> list[str]: ...
+
+    # counters
+    def incr(self, name: str, by: int = 1) -> None: ...
+    def counters(self) -> dict[str, int]: ...
+    def reset_counters(self) -> None: ...
+
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS contracts(
@@ -37,7 +85,14 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-class Store:
+def _row(cursor) -> dict | None:
+    r = cursor.fetchone()
+    return dict(r) if r is not None else None
+
+
+class SqliteStore:
+    """Local single-file SQLite implementation of `Store`."""
+
     def __init__(self, db_path: Path | str):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -67,8 +122,8 @@ class Store:
         )
         self._conn.commit()
 
-    def get_contract(self, name: str) -> sqlite3.Row | None:
-        return self._conn.execute("SELECT * FROM contracts WHERE name=?", (name,)).fetchone()
+    def get_contract(self, name: str) -> dict | None:
+        return _row(self._conn.execute("SELECT * FROM contracts WHERE name=?", (name,)))
 
     def contract_names(self) -> list[str]:
         return [r["name"] for r in self._conn.execute("SELECT name FROM contracts ORDER BY name")]
@@ -138,8 +193,8 @@ class Store:
         )
         self._conn.commit()
 
-    def get_impl(self, contract_name: str) -> sqlite3.Row | None:
-        return self._conn.execute("SELECT * FROM impls WHERE contract_name=?", (contract_name,)).fetchone()
+    def get_impl(self, contract_name: str) -> dict | None:
+        return _row(self._conn.execute("SELECT * FROM impls WHERE contract_name=?", (contract_name,)))
 
     def put_blob(self, content: str) -> str:
         """Store impl source under its content hash (idempotent); return the hash."""
@@ -149,13 +204,13 @@ class Store:
         return h
 
     def get_blob(self, blob_hash: str) -> str | None:
-        row = self._conn.execute("SELECT content FROM blobs WHERE hash=?", (blob_hash,)).fetchone()
+        row = _row(self._conn.execute("SELECT content FROM blobs WHERE hash=?", (blob_hash,)))
         return row["content"] if row is not None else None
 
     # -- impl hash cache (keyed by file identity; speeds up status) ----------
 
-    def get_cached_impl_hash(self, impl_ref: str) -> sqlite3.Row | None:
-        return self._conn.execute("SELECT * FROM impl_hash_cache WHERE impl_ref=?", (impl_ref,)).fetchone()
+    def get_cached_impl_hash(self, impl_ref: str) -> dict | None:
+        return _row(self._conn.execute("SELECT * FROM impl_hash_cache WHERE impl_ref=?", (impl_ref,)))
 
     def put_cached_impl_hash(self, impl_ref: str, mtime_ns: int, size: int, impl_hash: str) -> None:
         self._conn.execute(
@@ -176,8 +231,8 @@ class Store:
         )
         self._conn.commit()
 
-    def get_verification(self, key: str) -> sqlite3.Row | None:
-        return self._conn.execute("SELECT * FROM verifications WHERE key=?", (key,)).fetchone()
+    def get_verification(self, key: str) -> dict | None:
+        return _row(self._conn.execute("SELECT * FROM verifications WHERE key=?", (key,)))
 
     def mark_stale(self, contract_names: list[str]) -> int:
         if not contract_names:

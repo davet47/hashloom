@@ -27,7 +27,7 @@ sys.path.insert(0, str(REPO / "src"))
 from heddle import api, tokens  # noqa: E402
 from heddle.indexer import index  # noqa: E402
 from heddle.project import db_path, init_project  # noqa: E402
-from heddle.store import Store  # noqa: E402
+from heddle.store import Store, SqliteStore  # noqa: E402
 
 SALES = REPO / "examples" / "sales"
 # one regeneration task per layer of the dependency graph
@@ -37,7 +37,7 @@ TASKS = ["revenue_by_region", "top_customers", "revenue_by_category"]
 def fresh_store() -> Store:
     shutil.rmtree(SALES / ".heddle", ignore_errors=True)
     init_project(SALES)
-    store = Store(db_path(SALES))
+    store = SqliteStore(db_path(SALES))
     index(SALES, store)
     return store
 

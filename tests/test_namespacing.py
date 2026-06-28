@@ -14,12 +14,12 @@ from heddle.contract import parse_contract
 from heddle.errors import HeddleError
 from heddle.indexer import index
 from heddle.project import db_path, init_project
-from heddle.store import Store
+from heddle.store import SqliteStore
 
 
 def _project(tmp_path):
     init_project(tmp_path)
-    return tmp_path, Store(db_path(tmp_path))
+    return tmp_path, SqliteStore(db_path(tmp_path))
 
 
 def _write(root, relpath: str, body: str) -> None:
@@ -150,7 +150,7 @@ def test_case_variant_names_handled_per_filesystem(tmp_path):
             api.put_contract(root, store, "billing/invoice", body)
         assert e.value.code == "name_collision"
         assert "billing/Invoice" in store.contract_names()
-        assert index(root, Store(db_path(root)))["indexed"] == 1  # store stays rebuildable
+        assert index(root, SqliteStore(db_path(root)))["indexed"] == 1  # store stays rebuildable
     else:
         api.put_contract(root, store, "billing/invoice", body)  # genuinely distinct files
         assert set(store.contract_names()) == {"billing/Invoice", "billing/invoice"}

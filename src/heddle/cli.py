@@ -61,9 +61,9 @@ def main(argv: list[str] | None = None) -> int:
             serve(root, python=args.python, pycache_trust=False if args.no_pycache_trust else None)
             return 0
 
-        from .store import Store
+        from .store import SqliteStore
 
-        store = Store(db_path(root))
+        store = SqliteStore(db_path(root))
         if args.command == "index":
             from .indexer import index
 

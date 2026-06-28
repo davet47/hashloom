@@ -154,10 +154,10 @@ def test_index_populates_impl_blobs(project):
 
 def test_put_blob_is_content_addressed_and_round_trips(tmp_path):
     from heddle.project import db_path, init_project
-    from heddle.store import Store
+    from heddle.store import SqliteStore
 
     init_project(tmp_path)
-    store = Store(db_path(tmp_path))
+    store = SqliteStore(db_path(tmp_path))
     try:
         h = store.put_blob("def f():\n    return 1\n")
         assert store.get_blob(h) == "def f():\n    return 1\n"

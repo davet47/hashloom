@@ -14,7 +14,7 @@ import yaml
 from heddle import api
 from heddle.contract import contract_hash, parse_contract
 from heddle.project import db_path
-from heddle.store import Store
+from heddle.store import SqliteStore
 
 
 def _contract(name: str, sig: str = "() -> None") -> str:
@@ -22,7 +22,7 @@ def _contract(name: str, sig: str = "() -> None") -> str:
 
 
 def _put(root, name: str, text: str) -> None:
-    store = Store(db_path(root))
+    store = SqliteStore(db_path(root))
     try:
         api.put_contract(root, store, name, text)
     finally:
@@ -35,7 +35,7 @@ def test_concurrent_distinct_names_all_land(project):
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
         list(ex.map(lambda n: _put(root, n, _contract(n)), names))
 
-    check = Store(db_path(root))
+    check = SqliteStore(db_path(root))
     try:
         for n in names:
             text = (root / "contracts" / f"{n}.yaml").read_text()
@@ -56,7 +56,7 @@ def test_concurrent_same_name_never_torn_or_divergent(project):
     assert yaml.safe_load(text)["name"] == name  # valid YAML, not a torn write
     assert text in variants  # exactly one writer's content, never a blend
     # the file and the store agree: recorded hash matches what is on disk
-    check = Store(db_path(root))
+    check = SqliteStore(db_path(root))
     try:
         assert check.get_contract(name)["hash"] == contract_hash(parse_contract(text, expect_name=name))
     finally:

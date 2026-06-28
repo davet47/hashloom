@@ -16,14 +16,14 @@ from . import api, tokens
 from .config import resolve_pycache_trust, resolve_python, resolve_timeout
 from .errors import HeddleError
 from .project import db_path, find_root
-from .store import Store
+from .store import SqliteStore
 
 
 def build_server(
     root: Path | None = None, python: str | None = None, pycache_trust: bool | None = None
 ) -> FastMCP:
     root = find_root(root)
-    store = Store(db_path(root))
+    store = SqliteStore(db_path(root))
     interp = resolve_python(root, override=python)  # resolved once per session
     timeout = resolve_timeout(root)
     trust = resolve_pycache_trust(root, override=pycache_trust)

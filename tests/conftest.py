@@ -7,7 +7,7 @@ import pytest
 
 from heddle.indexer import index
 from heddle.project import db_path, init_project
-from heddle.store import Store
+from heddle.store import SqliteStore
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ def project(tmp_path: Path):
             assert report([Item(2.0, True)]) == "total: 2.00"
     """))
 
-    store = Store(db_path(tmp_path))
+    store = SqliteStore(db_path(tmp_path))
     index(tmp_path, store)
     yield tmp_path, store
     store.close()
