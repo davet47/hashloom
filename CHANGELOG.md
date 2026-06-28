@@ -19,6 +19,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Shared verification cache MVP (`LayeredStore`): a local store fronted by a
   shared one (read-through, write-through for greens), so one client's verified
   green serves another. Design for the hosted service in docs/hosted-store.md.
+- Multi-language adapters: contracts whose `impl` is a `.go` file verify with a
+  Go adapter (a stdlib `go/ast` hash helper plus `go test -json`), chosen by the
+  impl's extension. Python is unchanged and the default; the contract syntax and
+  the 5-tool / 5-CLI surface are unchanged.
 
 ## [0.1.0] - 2026-06-23
 

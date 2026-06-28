@@ -13,7 +13,7 @@ import yaml
 from .config import resolve_python
 from .contract import contract_hash, diff_contracts, parse_contract
 from .errors import HeddleError, unknown_name
-from .implhash import impl_hash, test_source_hash
+from .langs import adapter_for
 from .project import atomic_write_text, case_collision, contract_lock, safe_contract_path
 from .store import Store
 from .verify import clear_pycache, verification_key, verify_one
@@ -85,8 +85,9 @@ def put_contract(root: Path, store: Store, name: str, yaml_text: str) -> dict:
         store.upsert_contract(name, new_hash, yaml_text)
         store.set_deps(name, data.get("deps", []))
         if "impl" in data:
+            adapter = adapter_for(data["impl"])
             try:
-                ihash = impl_hash(root, data["impl"], contract=name)
+                ihash = adapter.impl_hash(root, data["impl"], contract=name)
             except HeddleError:
                 ihash = None
             store.upsert_impl(name, ihash, data["impl"].partition("::")[0])
@@ -149,15 +150,16 @@ def cached_impl_hash(root: Path, store: Store, impl: str, contract: str | None =
     `status` is informational, and mtime_ns makes a same-size-same-instant miss
     vanishingly unlikely.
     """
+    adapter = adapter_for(impl)
     path = root / impl.partition("::")[0]
     try:
         st = path.stat()
     except OSError:
-        return impl_hash(root, impl, contract=contract)  # absent file: let impl_hash raise cleanly
+        return adapter.impl_hash(root, impl, contract=contract)  # absent file: let it raise cleanly
     cached = store.get_cached_impl_hash(impl)
     if cached is not None and cached["mtime_ns"] == st.st_mtime_ns and cached["size"] == st.st_size:
         return cached["impl_hash"]
-    h = impl_hash(root, impl, contract=contract)
+    h = adapter.impl_hash(root, impl, contract=contract)
     store.put_cached_impl_hash(impl, st.st_mtime_ns, st.st_size, h)
     return h
 
@@ -174,7 +176,7 @@ def status(root: Path, store: Store) -> dict:
         except HeddleError:
             dirty.append(name)
             continue
-        thash = test_source_hash(root, data.get("tests", []))
+        thash = adapter_for(data["impl"]).test_source_hash(root, data.get("tests", []))
         v = store.get_verification(verification_key(store, name, ihash, thash))
         if v is None or v["status"] != "pass" or v["stale"]:
             dirty.append(name)

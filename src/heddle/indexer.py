@@ -8,7 +8,7 @@ import yaml
 
 from .contract import contract_hash, parse_contract
 from .errors import HeddleError, unknown_name
-from .implhash import impl_hash
+from .langs import adapter_for
 from .project import contracts_dir
 from .store import Store
 
@@ -67,14 +67,15 @@ def index(root: Path, store: Store) -> dict:
         store.set_deps(name, data.get("deps", []))
         if "impl" in data:
             path_str = data["impl"].partition("::")[0]
+            adapter = adapter_for(data["impl"])
             try:
-                ihash = impl_hash(root, data["impl"], contract=name)
+                ihash = adapter.impl_hash(root, data["impl"], contract=name)
             except HeddleError:
                 ihash = None  # missing impl shows up as dirty in status, not an index failure
             # store the impl file's source as a content-addressed blob so the store
             # can serve weft, not only verdicts; deduped across contracts sharing a file
-            ipath = root / path_str
-            bhash = store.put_blob(ipath.read_text(encoding="utf-8")) if ipath.is_file() else None
+            src = adapter.impl_source(root, data["impl"])
+            bhash = store.put_blob(src) if src is not None else None
             store.upsert_impl(name, ihash, path_str, blob_hash=bhash)
 
     removed = [n for n in old_hashes if n not in parsed]
