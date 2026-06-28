@@ -11,7 +11,7 @@ from pathlib import Path
 import yaml
 
 from .config import resolve_python
-from .contract import contract_hash, parse_contract
+from .contract import contract_hash, diff_contracts, parse_contract
 from .errors import HeddleError, unknown_name
 from .implhash import impl_hash
 from .project import atomic_write_text, case_collision, contract_lock, safe_contract_path
@@ -77,6 +77,9 @@ def put_contract(root: Path, store: Store, name: str, yaml_text: str) -> dict:
     with contract_lock(root, name):
         old = store.get_contract(name)
         changed = old is None or old["hash"] != new_hash
+        # what changed vs the previously stored contract: empty for a new unit or
+        # a cosmetic-only edit, using the same normalisation as the hash
+        diff = diff_contracts(yaml.safe_load(old["yaml"]), data) if old is not None else {}
 
         atomic_write_text(target, yaml_text)
         store.upsert_contract(name, new_hash, yaml_text)
@@ -92,7 +95,10 @@ def put_contract(root: Path, store: Store, name: str, yaml_text: str) -> dict:
         if changed:
             invalidated = store.dependents_of(name, transitive=True)
             store.mark_stale([name, *invalidated])
-    return {"name": name, "hash": _short(new_hash), "changed": changed, "invalidated": invalidated}
+    result = {"name": name, "hash": _short(new_hash), "changed": changed, "invalidated": invalidated}
+    if diff:
+        result["diff"] = diff
+    return result
 
 
 def get_dependents(root: Path, store: Store, name: str, transitive: bool = False) -> dict:

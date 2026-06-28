@@ -101,7 +101,7 @@ Contracts are reviewed artifacts. Authoring one is cheap and getting cheaper, so
 | tool | does |
 |---|---|
 | `get_contract` | the ~300-token context packet: contract + hash + one-line dep signatures + caller list |
-| `put_contract` | validate, write `contracts/<name>.yaml`, return new hash + every invalidated dependent |
+| `put_contract` | validate, write `contracts/<name>.yaml`, return new hash, a semantic diff of what changed, and every invalidated dependent |
 | `get_dependents` | blast-radius query, direct or transitive, names + hashes |
 | `verify` | per-unit `cached-pass` / `pass` / `fail`; runs pytest only on cache misses; failures come back as a ≤40-token assertion summary, never a traceback |
 | `status` | dirty contracts, stale verifications, cache hit-rate, resolved verify interpreter, cumulative token counters |

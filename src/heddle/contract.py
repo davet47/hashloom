@@ -113,3 +113,86 @@ def canonical_form(data: dict) -> str:
 
 def contract_hash(data: dict) -> str:
     return hashlib.sha256(canonical_form(data).encode("utf-8")).hexdigest()
+
+
+def _list_diff(old: list[str], new: list[str]) -> dict:
+    """added / removed / reordered for an order-significant list of strings.
+
+    Membership is by value; `reordered` is reported only when the two lists hold
+    the same values in a different order, so a pure reorder (which the hash does
+    treat as meaning) is distinguishable from add/remove churn.
+    """
+    olds, news = set(old), set(new)
+    out: dict = {}
+    added = [x for x in new if x not in olds]
+    removed = [x for x in old if x not in news]
+    if added:
+        out["added"] = added
+    if removed:
+        out["removed"] = removed
+    if not added and not removed and old != new:
+        out["reordered"] = True
+    return out
+
+
+def _example_diff(old_ex: list[dict], new_ex: list[dict]) -> dict:
+    """Order-significant diff over examples, comparing normalised (in, out) pairs."""
+    def keys(exs: list[dict]) -> list[tuple[str, str]]:
+        return [(_norm(e["in"]), _norm(e["out"])) for e in exs]
+
+    o_keys, n_keys = keys(old_ex), keys(new_ex)
+    o_set, n_set = set(o_keys), set(n_keys)
+    out: dict = {}
+    added = [{"in": i, "out": o} for (i, o) in n_keys if (i, o) not in o_set]
+    removed = [{"in": i, "out": o} for (i, o) in o_keys if (i, o) not in n_set]
+    if added:
+        out["added"] = added
+    if removed:
+        out["removed"] = removed
+    if not added and not removed and o_keys != n_keys:
+        out["reordered"] = True
+    return out
+
+
+def diff_contracts(old: dict, new: dict) -> dict:
+    """Field-level semantic diff between two parsed contracts.
+
+    Normalises every field with `_norm`, exactly as the hash does, so a
+    cosmetic-only edit (whitespace, comments, key/dep order) yields an empty
+    diff: the same edits the contract hash ignores. Only changed fields appear.
+    `impl` and `tests` are excluded from the hash, but a change to them is still
+    reported here, since it is real and worth surfacing to an agent.
+    """
+    diff: dict = {}
+
+    o_sig, n_sig = _norm(old["signature"]), _norm(new["signature"])
+    if o_sig != n_sig:
+        diff["signature"] = {"old": o_sig, "new": n_sig}
+
+    # deps carry no order meaning, so compare as sets and never report a reorder
+    o_deps = {_norm(d) for d in old.get("deps", [])}
+    n_deps = {_norm(d) for d in new.get("deps", [])}
+    dep: dict = {}
+    if n_deps - o_deps:
+        dep["added"] = sorted(n_deps - o_deps)
+    if o_deps - n_deps:
+        dep["removed"] = sorted(o_deps - n_deps)
+    if dep:
+        diff["deps"] = dep
+
+    inv = _list_diff([_norm(i) for i in old.get("invariants", [])], [_norm(i) for i in new.get("invariants", [])])
+    if inv:
+        diff["invariants"] = inv
+
+    ex = _example_diff(old.get("examples", []), new.get("examples", []))
+    if ex:
+        diff["examples"] = ex
+
+    if _norm(old.get("impl", "")) != _norm(new.get("impl", "")):
+        diff["impl"] = {"old": old.get("impl"), "new": new.get("impl")}
+    o_tests = [_norm(t) for t in old.get("tests", [])]
+    n_tests = [_norm(t) for t in new.get("tests", [])]
+    if o_tests != n_tests:
+        diff["tests"] = {"old": old.get("tests", []), "new": new.get("tests", [])}
+
+    return diff
