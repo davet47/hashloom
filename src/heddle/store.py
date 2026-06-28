@@ -1,4 +1,5 @@
-"""SQLite store: contracts, dependency edges, impls, verifications, counters.
+"""SQLite store: contracts, dependency edges, impls, impl-source blobs,
+verifications, counters.
 
 The store is derived state — deletable and rebuildable from contracts/ at any
 time via `heddle index`.
@@ -6,6 +7,7 @@ time via `heddle index`.
 
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,7 +19,9 @@ CREATE TABLE IF NOT EXISTS edges(
     from_name TEXT NOT NULL, to_name TEXT NOT NULL,           -- from depends on to
     PRIMARY KEY(from_name, to_name));
 CREATE TABLE IF NOT EXISTS impls(
-    contract_name TEXT PRIMARY KEY, impl_hash TEXT, path TEXT);
+    contract_name TEXT PRIMARY KEY, impl_hash TEXT, path TEXT, blob_hash TEXT);
+CREATE TABLE IF NOT EXISTS blobs(
+    hash TEXT PRIMARY KEY, content TEXT NOT NULL);   -- impl source, content-addressed
 CREATE TABLE IF NOT EXISTS impl_hash_cache(
     impl_ref TEXT PRIMARY KEY, mtime_ns INTEGER NOT NULL, size INTEGER NOT NULL, impl_hash TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS verifications(
@@ -40,6 +44,15 @@ class Store:
         self._conn = sqlite3.connect(self.db_path)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
+        self._migrate()
+
+    def _migrate(self) -> None:
+        # the store is derived, but add new columns in place so an existing
+        # store.db from an older heddle keeps working without a manual rebuild
+        cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(impls)")}
+        if "blob_hash" not in cols:
+            self._conn.execute("ALTER TABLE impls ADD COLUMN blob_hash TEXT")
+            self._conn.commit()
 
     def close(self) -> None:
         self._conn.close()
@@ -110,15 +123,34 @@ class Store:
             seen.update(frontier)
         return sorted(seen)
 
-    # -- impls --------------------------------------------------------------
+    # -- impls + content-addressed impl-source blobs ------------------------
 
-    def upsert_impl(self, contract_name: str, impl_hash: str | None, path: str | None) -> None:
+    def upsert_impl(
+        self, contract_name: str, impl_hash: str | None, path: str | None, blob_hash: str | None = None
+    ) -> None:
+        # blob_hash is COALESCEd: a caller without the source (verify) passes None
+        # and must not clear a blob a prior index/put_contract recorded
         self._conn.execute(
-            "INSERT INTO impls(contract_name, impl_hash, path) VALUES(?,?,?) "
-            "ON CONFLICT(contract_name) DO UPDATE SET impl_hash=excluded.impl_hash, path=excluded.path",
-            (contract_name, impl_hash, path),
+            "INSERT INTO impls(contract_name, impl_hash, path, blob_hash) VALUES(?,?,?,?) "
+            "ON CONFLICT(contract_name) DO UPDATE SET impl_hash=excluded.impl_hash, path=excluded.path, "
+            "blob_hash=COALESCE(excluded.blob_hash, impls.blob_hash)",
+            (contract_name, impl_hash, path, blob_hash),
         )
         self._conn.commit()
+
+    def get_impl(self, contract_name: str) -> sqlite3.Row | None:
+        return self._conn.execute("SELECT * FROM impls WHERE contract_name=?", (contract_name,)).fetchone()
+
+    def put_blob(self, content: str) -> str:
+        """Store impl source under its content hash (idempotent); return the hash."""
+        h = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        self._conn.execute("INSERT OR IGNORE INTO blobs(hash, content) VALUES(?,?)", (h, content))
+        self._conn.commit()
+        return h
+
+    def get_blob(self, blob_hash: str) -> str | None:
+        row = self._conn.execute("SELECT content FROM blobs WHERE hash=?", (blob_hash,)).fetchone()
+        return row["content"] if row is not None else None
 
     # -- impl hash cache (keyed by file identity; speeds up status) ----------
 

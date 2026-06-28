@@ -71,7 +71,11 @@ def index(root: Path, store: Store) -> dict:
                 ihash = impl_hash(root, data["impl"], contract=name)
             except HeddleError:
                 ihash = None  # missing impl shows up as dirty in status, not an index failure
-            store.upsert_impl(name, ihash, path_str)
+            # store the impl file's source as a content-addressed blob so the store
+            # can serve weft, not only verdicts; deduped across contracts sharing a file
+            ipath = root / path_str
+            bhash = store.put_blob(ipath.read_text(encoding="utf-8")) if ipath.is_file() else None
+            store.upsert_impl(name, ihash, path_str, blob_hash=bhash)
 
     removed = [n for n in old_hashes if n not in parsed]
     for name in removed:

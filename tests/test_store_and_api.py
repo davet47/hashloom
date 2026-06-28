@@ -140,3 +140,28 @@ def test_status_cache_invalidates_on_impl_edit(project):
         "vals = [i.value for i in items if i.ok]\n    return sum(vals)",
     ))
     assert "total" in api.status(root, store)["dirty"]
+
+
+def test_index_populates_impl_blobs(project):
+    root, store = project
+    total, report = store.get_impl("total"), store.get_impl("report")
+    assert total["blob_hash"] is not None
+    # total and report share src/calc.py, so the blob is deduped to one hash
+    assert total["blob_hash"] == report["blob_hash"]
+    src = store.get_blob(total["blob_hash"])
+    assert "def total(" in src and "def report(" in src
+
+
+def test_put_blob_is_content_addressed_and_round_trips(tmp_path):
+    from heddle.project import db_path, init_project
+    from heddle.store import Store
+
+    init_project(tmp_path)
+    store = Store(db_path(tmp_path))
+    try:
+        h = store.put_blob("def f():\n    return 1\n")
+        assert store.get_blob(h) == "def f():\n    return 1\n"
+        assert store.put_blob("def f():\n    return 1\n") == h  # idempotent / deduped
+        assert store.get_blob("0" * 64) is None
+    finally:
+        store.close()
