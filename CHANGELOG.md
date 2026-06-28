@@ -23,6 +23,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Go adapter (a stdlib `go/ast` hash helper plus `go test -json`), chosen by the
   impl's extension. Python is unchanged and the default; the contract syntax and
   the 5-tool / 5-CLI surface are unchanged.
+- A `rechecks` block in `status` (#20): re-verifications triggered by a contract
+  change, and how many changed no verdict (`wasted_rate`).
+- Invariants out of the contract hash (#19): rewording or reordering an invariant
+  no longer changes the hash or cascades a re-verify. Invariants are documentation;
+  the machine check is the tests (their source is in the key via #18). One-time:
+  contracts with invariants re-hash once on upgrade.
 
 ## [0.1.0] - 2026-06-23
 

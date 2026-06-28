@@ -82,13 +82,12 @@ def test_dep_contract_change_busts_dependent_cache(project):
     api.verify(root, store, ["total", "report"])
     write_contract(root, "Item", """
         name: Item
-        signature: "dataclass: value: float, ok: bool"
+        signature: "dataclass: value: float, ok: bool, tag: str"
         invariants:
           - value may be any float
-          - ok defaults to true
     """)
     index(root, store)
-    # Item changed: both dependents re-run even though their own yaml/impl didn't move
+    # Item's signature changed: both dependents re-run even though their own yaml/impl didn't move
     assert statuses(api.verify(root, store, ["total", "report"])) == {"total": "pass", "report": "pass"}
 
 

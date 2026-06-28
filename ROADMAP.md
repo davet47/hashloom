@@ -43,14 +43,15 @@ results."
   The key now folds in a normalised-AST hash of each test's source, so a
   test-body edit forces a re-run. Conftest fixtures and helpers a test calls are
   not yet covered.
-- **Invariants out of the binding hash** ([#19](https://github.com/davet47/heddle/issues/19)).
-  Invariants are prose but currently sit inside the contract hash, so a reword
-  cascades a re-verify across dependents. This is a precision fix, not a
-  soundness one (it removes spurious re-verification, unlike #18 which closes a
-  stale-green hole). Minimise the hashed prose surface.
-- **Semantic necessity rate in `status`** ([#20](https://github.com/davet47/heddle/issues/20)).
-  Count contract edits that busted the hash but changed zero verification
-  outcomes, to measure how much re-verification is necessary versus cosmetic.
+- ✓ **Invariants out of the binding hash** ([#19](https://github.com/davet47/heddle/issues/19)) (shipped).
+  Invariants are now excluded from the contract hash, so rewording one no longer
+  cascades a re-verify; the machine check is the tests (their source is in the
+  key via #18). A meaning-changing invariant edit will not re-verify; invariants
+  are prose, and this is a precision fix, not a soundness one.
+- ✓ **Semantic necessity rate in `status`** ([#20](https://github.com/davet47/heddle/issues/20)) (shipped).
+  `status` reports a `rechecks` block: re-verifications triggered by a hash bust
+  and how many changed no verdict (`wasted_rate`), measuring how much
+  re-verification is cosmetic.
 
 ## v0.3+ — bigger bets
 

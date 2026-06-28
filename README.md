@@ -36,10 +36,10 @@ Same three regeneration tasks on a 20-contract sample project, once with raw fil
 
 | task                | raw files | heddle | reduction |
 |---------------------|----------:|-------:|----------:|
-| revenue_by_region   |     1,925 |    371 |      5.2x |
-| top_customers       |     2,137 |    334 |      6.4x |
-| revenue_by_category |     1,942 |    392 |      5.0x |
-| **total**           | **6,004** | **1,097** | **5.5x** |
+| revenue_by_region   |     1,925 |    369 |      5.2x |
+| top_customers       |     2,137 |    337 |      6.3x |
+| revenue_by_category |     1,942 |    396 |      4.9x |
+| **total**           | **6,004** | **1,102** | **5.4x** |
 
 Raw mode counts what a file-based agent reads per task: the unit's spec file, every transitive dep's spec file, every source module in the dep closure, the unit's test file, and the output of running the suite. It is deliberately generous to the baseline: it assumes the agent already knows the exact dependency closure, which is precisely the thing heddle computes for you.
 
@@ -92,7 +92,7 @@ Contracts are reviewed artifacts. Authoring one is cheap and getting cheaper, so
 
 ### Hashing semantics
 
-- **Contract hash**: sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, invariant and example order preserved, dep order ignored. `impl` and `tests` are excluded, so **relocating files never invalidates.** Invariants are free text and live inside this hash, so rewording one without changing its meaning still moves the contract hash and re-verifies every dependent. Behaviour-equivalent prose edits are not free yet (see [Roadmap](https://github.com/davet47/heddle/blob/main/ROADMAP.md)).
+- **Contract hash**: sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, example order preserved, dep order ignored. `impl`, `tests`, and `invariants` are excluded, so **relocating files never invalidates** and rewording an invariant is free. Invariants are documentation, not a machine obligation; the real check is the tests, whose source is in the verification key.
 - **Impl hash**: sha256 over the normalised AST of the implementation, so reformatting and comment edits never bust the cache. Docstrings are stripped too.
 - **Verification key**: `(contract hash, impl hash, test-source hash, transitive dep contract hashes)`. Heddle caches verification results, keyed so that a change to any contract in the closure, to the implementation, or to a test's own source forces a re-run. Failures are never served from cache. Two caveats. A cached pass assumes deterministic tests, so a green result that depended on wall-clock time, network, or randomness can outlive the condition that made it pass. And the test-source hash covers each test function's own normalised AST, not the conftest fixtures or helpers it calls, so changing only those will not force a re-run yet (see [Roadmap](ROADMAP.md)).
 

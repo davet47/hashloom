@@ -73,12 +73,13 @@ def test_impl_and_tests_paths_do_not_change_hash():
     assert h(relocated) == h(BASE)
 
 
-def test_invariant_order_changes_hash():
+def test_invariant_order_does_not_change_hash():
+    # #19: invariants are excluded from the hash, so reordering them is cosmetic
     swapped = BASE.replace(
         "  - excludes sales where completed is false\n  - excludes sales with null amount",
         "  - excludes sales with null amount\n  - excludes sales where completed is false",
     )
-    assert h(swapped) != h(BASE)
+    assert h(swapped) == h(BASE)
 
 
 def test_signature_change_changes_hash():
@@ -86,9 +87,10 @@ def test_signature_change_changes_hash():
     assert h(changed) != h(BASE)
 
 
-def test_invariant_wording_change_changes_hash():
+def test_invariant_wording_does_not_change_hash():
+    # #19: rewording an invariant no longer busts the hash (it is documentation)
     changed = BASE.replace("null amount", "missing amount")
-    assert h(changed) != h(BASE)
+    assert h(changed) == h(BASE)
 
 
 def test_example_change_changes_hash():

@@ -1,9 +1,9 @@
 """Contract parsing, validation, and canonical hashing.
 
 The contract hash is sha256 over a canonical form: keys sorted, whitespace
-normalised, comments stripped (free with YAML parsing), list order preserved
-for invariants/examples (order is meaning), deps sorted (order is not),
-`impl` and `tests` excluded so relocating files never invalidates.
+normalised, comments stripped (free with YAML parsing), example order preserved
+(order is meaning), deps sorted (order is not), and `impl`, `tests`, and
+`invariants` excluded (invariants are free-text docs; the tests are the check).
 """
 
 from __future__ import annotations
@@ -104,8 +104,9 @@ def canonical_form(data: dict) -> str:
         "signature": _norm(data["signature"]),
         # deps order carries no meaning — sorted so reordering never invalidates
         "deps": sorted(_norm(d) for d in data.get("deps", [])),
-        # invariant/example order is meaning — preserved
-        "invariants": [_norm(i) for i in data.get("invariants", [])],
+        # invariants are excluded (#19): free-text docs, not a machine obligation;
+        # the real check is the tests, whose source is in the verification key.
+        # example order is meaning — preserved
         "examples": [{"in": _norm(ex["in"]), "out": _norm(ex["out"])} for ex in data.get("examples", [])],
     }
     return json.dumps(canon, sort_keys=True, separators=(",", ":"), ensure_ascii=False)

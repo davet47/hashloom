@@ -39,7 +39,7 @@ def test_all_five_tools_over_stdio(project):
     store.close()
 
     new_yaml = (root / "contracts" / "total.yaml").read_text().replace(
-        "excludes items where ok is false", "also excludes items with negative value"
+        "(items: list[Item]) -> float", "(items: list[Item]) -> int"
     )
     tools, packet, deps, verified, put, status = call(
         root,

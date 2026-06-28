@@ -71,7 +71,7 @@ def test_put_contract_writes_file_and_invalidates(project):
     root, store = project
     old_hash = store.get_contract("total")["hash"]
     new_yaml = (root / "contracts" / "total.yaml").read_text().replace(
-        "excludes items where ok is false", "excludes items where ok is false or value is negative"
+        "(items: list[Item]) -> float", "(items: list[Item]) -> int"
     )
     out = api.put_contract(root, store, "total", new_yaml)
     assert out["changed"] is True
