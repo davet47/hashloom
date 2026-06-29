@@ -94,10 +94,13 @@ def _row(cursor) -> dict | None:
 class SqliteStore:
     """Local single-file SQLite implementation of `Store`."""
 
-    def __init__(self, db_path: Path | str):
+    def __init__(self, db_path: Path | str, check_same_thread: bool = True):
+        # check_same_thread defaults True (the local single-process path). The
+        # cache server opens with False because its one connection is created on
+        # one thread and used on the serve_forever thread, serialised throughout.
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(self.db_path)
+        self._conn = sqlite3.connect(self.db_path, check_same_thread=check_same_thread)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
         self._migrate()

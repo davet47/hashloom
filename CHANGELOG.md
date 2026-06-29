@@ -7,6 +7,15 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Remote shared verification cache (transport): a `RemoteStore` client and a
+  stdlib `python -m heddle.cache_server` (a bearer-token JSON HTTP service over a
+  `SqliteStore`) let a team share verdicts and impl blobs across machines —
+  configured per project via `.heddle/config.json` `{"shared": {"url","token"}}`,
+  with **no change to the 5 MCP tools / 5 CLI commands** (the cache server is an
+  operational process, not a subcommand). A shared-store outage degrades silently
+  to local verify. Cross-machine greens currently assume a shared toolchain;
+  pinning the toolchain in the verification key is the next step (see
+  docs/hosted-store.md).
 - Semantic diff in `put_contract`: the response carries a `diff` of what changed
   versus the prior contract (signature, deps, invariants, examples, impl/tests).
 - Test source in the verification key (#18): editing a test's body now forces a

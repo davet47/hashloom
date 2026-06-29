@@ -113,3 +113,23 @@ def resolve_pycache_trust(root: Path, override: bool | None = None) -> bool:
     if not isinstance(value, bool):
         raise HeddleError("bad_config", f"pycache_trust must be true or false, got {value!r}")
     return value
+
+
+def resolve_shared_store(root: Path) -> dict | None:
+    """Config for a shared/remote verification cache, or None if not configured.
+
+    `.heddle/config.json` -> `{"shared": {"url": "...", "token": "..."}}` selects a
+    remote cache the local store reads/writes through (see remote.py / shared.py).
+    Validated here so a malformed block fails clean; absent means local-only.
+    """
+    cfg = load_config(root).get("shared")
+    if cfg is None:
+        return None
+    if not isinstance(cfg, dict):
+        raise HeddleError("bad_config", "shared must be a JSON object")
+    url, token = cfg.get("url"), cfg.get("token")
+    if not isinstance(url, str) or not url:
+        raise HeddleError("bad_config", "shared.url must be a non-empty string")
+    if not isinstance(token, str) or not token:
+        raise HeddleError("bad_config", "shared.token must be a non-empty string")
+    return {"url": url, "token": token}

@@ -23,6 +23,8 @@ Anything not on the current milestone is an entry in [ISSUES.md](ISSUES.md) — 
 it there, don't write the code. The named failure mode is "scope creep toward
 Loom." Keep the surface minimal: **5 MCP tools, 5 CLI commands.** The README
 documents "the entire surface"; if a change would add to it, stop and confirm.
+(The shared-cache backend `python -m heddle.cache_server` is a deliberate
+*operational* process, not a 6th CLI command — the client surface stays 5/5.)
 
 ## Definition of done: >5x token reduction
 
