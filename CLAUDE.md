@@ -62,6 +62,11 @@ message)` for anything an agent should see. Keep it that way.
 So heddle can verify a target project against *its own* venv without being
 installed into it. `heddle status` reports the resolved interpreter.
 
+Non-Python impls resolve their own toolchain by the same precedence, keyed by the
+impl extension: a `.go` impl uses `go` (`.heddle/config.json` → `"go"`); a
+`.ts`/`.tsx` impl uses `node` (→ `"node"`) plus the project's *own* `typescript`,
+and auto-detects the test runner (vitest / jest, else Node's `node:test`).
+
 ## How to run
 
 ```bash
@@ -72,4 +77,6 @@ uv run python bench/benchmark.py    # the DoD number
 CI (`.github/workflows/ci.yml`) runs both on every push and PR, so the DoD and
 hash-stability rules are enforced, not just documented. Keep it green.
 
-Python >=3.10. Deps: mcp, pyyaml, tiktoken, pytest.
+Python >=3.10. Deps: mcp, pyyaml, tiktoken, pytest. TypeScript contracts also
+need Node >=22.6 and the project's own `typescript` (CI installs a repo-local one
+via `npm ci`; `node_modules/` is gitignored).

@@ -2,11 +2,12 @@
 
 Each adapter knows how to, for one language: hash an implementation's normalised
 AST, hash a test's source, read impl source for the content-addressed blob,
-resolve the language's toolchain, and run tests. Python is the default; Go is the
-first non-Python adapter.
+resolve the language's toolchain, and run tests. Python is the default; Go and
+TypeScript are the non-Python adapters.
 
 The adapter is chosen by the impl file's extension (`adapter_for`), so contracts
-gain no new syntax: a `.go` impl routes to Go, everything else to Python.
+gain no new syntax: a `.go` impl routes to Go, `.ts`/`.tsx`/`.mts`/`.cts` to
+TypeScript, everything else to Python.
 """
 
 from __future__ import annotations
@@ -30,11 +31,12 @@ class LanguageAdapter(Protocol):
 
 _PYTHON: LanguageAdapter | None = None
 _GO: LanguageAdapter | None = None
+_TS: LanguageAdapter | None = None
 
 
 def adapter_for(impl: str) -> LanguageAdapter:
     """Pick the adapter by the impl file's extension; default to Python."""
-    global _PYTHON, _GO
+    global _PYTHON, _GO, _TS
     path = impl.partition("::")[0]
     if path.endswith(".go"):
         if _GO is None:
@@ -42,6 +44,12 @@ def adapter_for(impl: str) -> LanguageAdapter:
 
             _GO = GoAdapter()
         return _GO
+    if path.endswith((".ts", ".tsx", ".mts", ".cts")):
+        if _TS is None:
+            from .typescript import TypeScriptAdapter
+
+            _TS = TypeScriptAdapter()
+        return _TS
     if _PYTHON is None:
         from .python import PythonAdapter
 
