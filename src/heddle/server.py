@@ -15,15 +15,15 @@ from mcp.server.fastmcp import FastMCP
 from . import api, tokens
 from .config import resolve_pycache_trust, resolve_timeout
 from .errors import HeddleError
-from .project import db_path, find_root
-from .store import SqliteStore
+from .project import find_root
+from .remote import build_store
 
 
 def build_server(
     root: Path | None = None, python: str | None = None, pycache_trust: bool | None = None
 ) -> FastMCP:
     root = find_root(root)
-    store = SqliteStore(db_path(root))
+    store = build_store(root)  # local, or LayeredStore over a shared cache if configured
     # the toolchain override is resolved per-language inside verify_one, so a
     # project can mix Python and Go contracts
     timeout = resolve_timeout(root)

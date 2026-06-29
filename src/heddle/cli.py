@@ -51,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
             print("\n".join(f"created {p}" for p in created) if created else "already initialised")
             return 0
 
-        from .project import db_path, find_root
+        from .project import find_root
 
         root = Path.cwd() if args.command == "init" else find_root()
 
@@ -61,9 +61,9 @@ def main(argv: list[str] | None = None) -> int:
             serve(root, python=args.python, pycache_trust=False if args.no_pycache_trust else None)
             return 0
 
-        from .store import SqliteStore
+        from .remote import build_store
 
-        store = SqliteStore(db_path(root))
+        store = build_store(root)  # local, or LayeredStore over a shared cache if configured
         if args.command == "index":
             from .indexer import index
 
