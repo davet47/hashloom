@@ -57,10 +57,10 @@ results."
 
 - **Multi-language** — a normalised-AST hasher + a test-runner adapter per
   language, behind a per-language adapter seam chosen by the impl extension.
-  ✓ **Go shipped** (stdlib `go/ast` hash + `go test -json`); Python is the
-  default. **TypeScript is next** (~a focused day; the hand-written canonical AST
-  serializer is the bulk, since TS has no `ast.dump`). Each further language is
-  real work.
+  ✓ **Go shipped** (stdlib `go/ast` hash + `go test -json`) and ✓ **TypeScript
+  shipped** (hand-written canonical AST hash via the TS Compiler API, plus an
+  auto-detected runner: vitest / jest / Node's built-in `node:test`); Python is
+  the default. Each further language is real work.
 - **Tessl spec-format compatibility** — an import/export adapter, once that format
   is stable.
 
@@ -86,13 +86,11 @@ project avoids "scope creep toward Loom." Keep the surface minimal: 5 MCP tools,
 
 Shipped: v0.1 (PyPI, demo gif, announcements); v0.2 (semantic diff,
 content-addressed impl store, the `Store` interface, the shared-cache MVP); the
-first **Go** adapter; and the verification-model sharpening (#18, #19, #20).
-Next, in rough order:
+**Go** and **TypeScript** adapters; and the verification-model sharpening
+(#18, #19, #20). Next, in rough order:
 
-1. **TypeScript adapter**: the second language (~a focused day; the hand-written
-   AST serializer dominates, the Go adapter seam is reused).
-2. **Hosted-store server**: turn the `LayeredStore` MVP into a real shared
+1. **Hosted-store server**: turn the `LayeredStore` MVP into a real shared
    backend (transport, auth, cross-graph invalidation); design in
    [docs/hosted-store.md](docs/hosted-store.md).
-3. **Tessl compatibility**, and the post-launch error-code naming convention
+2. **Tessl compatibility**, and the post-launch error-code naming convention
    (`bad_*` vs `invalid_*`).

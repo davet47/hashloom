@@ -23,6 +23,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Go adapter (a stdlib `go/ast` hash helper plus `go test -json`), chosen by the
   impl's extension. Python is unchanged and the default; the contract syntax and
   the 5-tool / 5-CLI surface are unchanged.
+- TypeScript adapter: contracts whose `impl` is a `.ts`/`.tsx`/`.mts`/`.cts` file
+  verify with a TypeScript adapter — a hand-written canonical AST hash via the TS
+  Compiler API (resolved from the project's own `typescript`, since TS has no
+  `ast.dump`), plus an auto-detected test runner (vitest / jest if declared in
+  `package.json`, else Node's built-in `node:test`). Needs Node (>= 22.6 for `.ts`
+  type-stripping under `node:test`). Python and Go are unchanged; the contract
+  syntax and the 5-tool / 5-CLI surface are unchanged.
 - A `rechecks` block in `status` (#20): re-verifications triggered by a contract
   change, and how many changed no verdict (`wasted_rate`).
 - Invariants out of the contract hash (#19): rewording or reordering an invariant

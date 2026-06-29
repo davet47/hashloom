@@ -1,0 +1,8 @@
+{
+  "name": "heddle-dev",
+  "private": true,
+  "description": "Dev-only toolchain for heddle's TypeScript adapter tests (provides the `typescript` compiler the tshash helper resolves). Not part of the published Python package — the wheel ships only src/heddle via hatchling.",
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}
