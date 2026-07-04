@@ -62,6 +62,8 @@ claude mcp add heddle -- heddle serve
 
 (Stdio transport; the server resolves the project by walking up from its working directory to the nearest `.heddle/`.)
 
+New to the workflow? [docs/getting-started.md](docs/getting-started.md) walks through building a package contract-first with an agent — the working rules to give it, the review loop, and the verify gate.
+
 ## Contracts
 
 One YAML file per unit in `contracts/`. Minimal, hand-writable, hashable:
