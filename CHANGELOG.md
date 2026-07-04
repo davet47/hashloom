@@ -6,6 +6,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-04
+
+Theme: solo → team. A team can now share verification greens — one teammate or
+CI verifies a unit once and everyone gets `cached-pass` — soundly, keyed by
+toolchain. Plus two new language adapters, contract provenance, and a
+CI-gateable verify. Everything is additive: the 5 MCP tools / 5 CLI commands
+surface and the contract format are unchanged, and 0.1.0 projects work as-is.
+One-time cost on upgrade: existing cached greens re-verify once (the
+verification key now includes the toolchain).
+
 ### Added
 - Gate-shaped verification: `verify` responses carry a top-level `ok` — true iff
   every unit is `pass`/`cached-pass` (failures, unknown names, and unverifiable
@@ -90,5 +100,6 @@ stay `heddle`).
 - CI (tests on Python 3.10 through 3.13 plus the >5x benchmark guard) and PyPI
   Trusted Publishing on version tags.
 
-[Unreleased]: https://github.com/davet47/heddle/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/davet47/heddle/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/davet47/heddle/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/davet47/heddle/releases/tag/v0.1.0
