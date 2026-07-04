@@ -1,0 +1,12 @@
+name: FormatCents
+signature: "func FormatCents(cents int64) string"
+invariants:
+  - two decimal places, always
+  - negative amounts render the sign before the dollar symbol
+examples:
+  - in: "1234"
+    out: '"$12.34"'
+  - in: "-50"
+    out: '"-$0.50"'
+tests: [ledger/report_test.go::TestFormatCents]
+impl: ledger/report.go::FormatCents

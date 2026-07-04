@@ -1,0 +1,11 @@
+name: TotalDebits
+signature: "func TotalDebits(entries []Entry) int64"
+deps: [Entry, PostedEntries]
+invariants:
+  - counts only posted entries where Debit is true
+  - returns cents
+examples:
+  - in: "posted debits of 1000c and 250c, one unposted 9999c debit"
+    out: "1250"
+tests: [ledger/totals_test.go::TestTotalDebits]
+impl: ledger/totals.go::TotalDebits

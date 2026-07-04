@@ -1,0 +1,11 @@
+name: BalanceByAccount
+signature: "func BalanceByAccount(entries []Entry) map[Account]int64"
+deps: [Account, Entry, PostedEntries]
+invariants:
+  - balance is posted debits minus posted credits, in cents
+  - accounts with no posted entries are absent from the map
+examples:
+  - in: "cash debits 1250c, sales credits 1250c"
+    out: '{"cash": 1250, "sales": -1250}'
+tests: [ledger/totals_test.go::TestBalanceByAccount]
+impl: ledger/totals.go::BalanceByAccount

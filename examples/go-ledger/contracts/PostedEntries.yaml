@@ -1,0 +1,12 @@
+name: PostedEntries
+signature: "func PostedEntries(entries []Entry) []Entry"
+deps: [Entry]
+invariants:
+  - excludes entries where Posted is false
+  - preserves input order
+  - a nil input yields an empty slice, never nil panic
+examples:
+  - in: "[posted 100c debit, unposted 200c debit, posted 100c credit]"
+    out: "[posted 100c debit, posted 100c credit]"
+tests: [ledger/filters_test.go::TestPostedEntries]
+impl: ledger/filters.go::PostedEntries

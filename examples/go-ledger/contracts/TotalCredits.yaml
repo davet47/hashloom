@@ -1,0 +1,11 @@
+name: TotalCredits
+signature: "func TotalCredits(entries []Entry) int64"
+deps: [Entry, PostedEntries]
+invariants:
+  - counts only posted entries where Debit is false
+  - returns cents
+examples:
+  - in: "posted credits of 1000c and 250c"
+    out: "1250"
+tests: [ledger/totals_test.go::TestTotalCredits]
+impl: ledger/totals.go::TotalCredits

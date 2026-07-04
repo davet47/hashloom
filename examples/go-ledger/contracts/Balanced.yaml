@@ -1,0 +1,13 @@
+name: Balanced
+signature: "func Balanced(entries []Entry) bool"
+deps: [Entry, TotalDebits, TotalCredits]
+invariants:
+  - true iff posted total debits equal posted total credits
+  - an empty ledger is balanced
+examples:
+  - in: "1250c posted debits, 1250c posted credits"
+    out: "true"
+  - in: "one extra posted 1c debit"
+    out: "false"
+tests: [ledger/report_test.go::TestBalanced]
+impl: ledger/report.go::Balanced

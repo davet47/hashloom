@@ -1,0 +1,9 @@
+name: Account
+signature: "type Account string"
+invariants:
+  - identifies a ledger account by name
+examples:
+  - in: 'Account("cash")'
+    out: '"cash"'
+tests: [ledger/types_test.go::TestAccount]
+impl: ledger/types.go::Account

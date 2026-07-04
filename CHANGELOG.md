@@ -6,6 +6,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- A Go sample project, `examples/go-ledger`: 8 contracts over a small
+  double-entry ledger (struct/type contracts included), exercising the Go
+  adapter end to end — AST-stable impl hashing, `go test -json` verification,
+  and the `verify --radius` gate.
+
 ## [0.2.0] - 2026-07-04
 
 Theme: solo → team. A team can now share verification greens — one teammate or

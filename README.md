@@ -173,6 +173,11 @@ heddle init && heddle index && heddle serve   # then point your agent at it
 
 20 contracts, 25 tests, three dependency layers deep.
 
+There is a Go twin at `examples/go-ledger` (8 contracts over a small
+double-entry ledger, same loop: `heddle init && heddle index`, then
+`heddle verify --radius Entry` gates the blast radius with `go test` under the
+hood — needs a Go toolchain).
+
 ## Development
 
 ```bash

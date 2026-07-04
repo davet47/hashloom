@@ -1,0 +1,12 @@
+name: Entry
+signature: "type Entry struct { Account Account; Cents int64; Debit bool; Posted bool }"
+deps: [Account]
+invariants:
+  - amounts are integer cents, never floats
+  - a zero-value Entry is not posted
+  - field order is Account, Cents, Debit, Posted
+examples:
+  - in: 'Entry{Account: "cash", Cents: 1250, Debit: true, Posted: true}'
+    out: "a posted $12.50 debit against cash"
+tests: [ledger/types_test.go::TestEntry]
+impl: ledger/types.go::Entry
