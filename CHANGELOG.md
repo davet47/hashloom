@@ -7,6 +7,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- A getting-started walkthrough, `docs/getting-started.md`: how a human and an
+  agent build a package contract-first — setup, the CLAUDE.md working rules to
+  give the agent, the inferred→confirmed review loop, and the `verify --radius`
+  gate as the definition of done.
 - A TypeScript sample project, `examples/ts-cart`: 8 contracts over a shopping
   cart (interface/type-alias contracts included), exercising the TypeScript
   adapter end to end — canonical-AST impl hashing via the project's own
