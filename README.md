@@ -78,6 +78,7 @@ examples:
     out: "{'QLD': 10.0}"
 tests: [tests/test_revenue.py::test_revenue_by_region]   # pytest node IDs
 impl: src/revenue.py::revenue_by_region                  # current woven weft
+status: inferred        # reverse-engineered, not yet human-reviewed; omit once confirmed
 ```
 
 Subdirectories are namespaces: `contracts/billing/invoice.yaml` is the contract
@@ -90,9 +91,11 @@ A contract belongs on a stable seam: an interface other units depend on and that
 
 Contracts are reviewed artifacts. Authoring one is cheap and getting cheaper, so the real cost is reviewing it, not writing it. A wrong contract is worse than no contract, because the durable artifact now lies: agents will regenerate code to satisfy a spec that is itself incorrect. Review a contract the way you review an interface, not the way you skim generated code.
 
+A contract an agent reverse-engineers from existing code can declare that it hasn't earned that review yet: `status: inferred`. Tools then flag — never refuse — any blast-radius or verification answer that rests on it (`inferred: true` on dependents, an `inferred` list on verify results, a review queue in `status`). Absent means `confirmed`, and confirming an inferred contract after review is free: status is provenance, not meaning, so the flip invalidates nothing.
+
 ### Hashing semantics
 
-- **Contract hash**: sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, example order preserved, dep order ignored. `impl`, `tests`, and `invariants` are excluded, so **relocating files never invalidates** and rewording an invariant is free. Invariants are documentation, not a machine obligation; the real check is the tests, whose source is in the verification key.
+- **Contract hash**: sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, example order preserved, dep order ignored. `impl`, `tests`, `invariants`, and `status` are excluded, so **relocating files never invalidates**, rewording an invariant is free, and confirming an inferred contract never invalidates anything. Invariants are documentation, not a machine obligation; the real check is the tests, whose source is in the verification key.
 - **Impl hash**: sha256 over the normalised AST of the implementation, so reformatting and comment edits never bust the cache. Docstrings are stripped too.
 - **Verification key**: `(contract hash, impl hash, test-source hash, transitive dep contract hashes)`. Heddle caches verification results, keyed so that a change to any contract in the closure, to the implementation, or to a test's own source forces a re-run. Failures are never served from cache. Two caveats. A cached pass assumes deterministic tests, so a green result that depended on wall-clock time, network, or randomness can outlive the condition that made it pass. And the test-source hash covers each test function's own normalised AST, not the conftest fixtures or helpers it calls, so changing only those will not force a re-run yet (see [Roadmap](ROADMAP.md)).
 
@@ -102,8 +105,8 @@ Contracts are reviewed artifacts. Authoring one is cheap and getting cheaper, so
 |---|---|
 | `get_contract` | the ~300-token context packet: contract + hash + one-line dep signatures + caller list |
 | `put_contract` | validate, write `contracts/<name>.yaml`, return new hash, a semantic diff of what changed, and every invalidated dependent |
-| `get_dependents` | blast-radius query, direct or transitive, names + hashes |
-| `verify` | per-unit `cached-pass` / `pass` / `fail`; runs pytest only on cache misses; failures come back as a ≤40-token assertion summary, never a traceback |
+| `get_dependents` | blast-radius query, direct or transitive, names + hashes; inferred (unreviewed) contracts flagged |
+| `verify` | per-unit `cached-pass` / `pass` / `fail` plus a top-level `ok` gate bit; `radius=true` widens each name to its full blast radius; runs pytest only on cache misses; failures come back as a ≤40-token assertion summary, never a traceback; inferred contracts in the closure flagged |
 | `status` | dirty contracts, stale verifications, cache hit-rate, resolved verify interpreter, cumulative token counters |
 
 Every tool returns structured errors — `{"error": {"code": "unknown_dep", "message": "'Regoin' not found — nearest: 'Region'"}}` — never a stack trace.
@@ -126,7 +129,7 @@ never shadow the current source.
 
 `heddle init` · `heddle index` · `heddle serve` · `heddle status` · `heddle verify`. The sqlite store under `.heddle/` is derived state: delete it any time and `heddle index` rebuilds it from `contracts/`.
 
-`heddle verify <name>…` runs the same cached verification as the MCP tool from the command line and exits nonzero if any unit fails — drop it in CI or a pre-commit hook.
+`heddle verify <name>…` runs the same cached verification as the MCP tool from the command line and exits nonzero unless every unit is green (a failure, an unknown name, or an unverifiable unit all block) — drop it in CI or a pre-commit hook. `--radius` widens each name to itself plus every transitive dependent, so one command gates a change's whole blast radius: `heddle verify --radius Sale`.
 
 ## Try the sample project
 

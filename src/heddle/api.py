@@ -35,13 +35,23 @@ def _load(store: Store, name: str) -> tuple[dict, str]:
     return yaml.safe_load(row["yaml"]), row["hash"]
 
 
+def _is_inferred(store: Store, name: str) -> bool:
+    """A contract is inferred (machine-derived, not human-vetted) only when it
+    says so; absent status = confirmed, so 0.1.0 contracts keep full authority."""
+    data, _ = _load(store, name)
+    return data.get("status") == "inferred"
+
+
 def get_contract(root: Path, store: Store, name: str) -> dict:
     """The ~300-token context packet: contract + hash + dep signatures + callers."""
     data, chash = _load(store, name)
     deps = []
     for dep in data.get("deps", []):
         dep_data, dep_hash = _load(store, dep)
-        deps.append({"name": dep, "signature": dep_data["signature"], "hash": _short(dep_hash)})
+        entry = {"name": dep, "signature": dep_data["signature"], "hash": _short(dep_hash)}
+        if dep_data.get("status") == "inferred":
+            entry["inferred"] = True
+        deps.append(entry)
     return {
         "name": name,
         "hash": _short(chash),
@@ -97,6 +107,12 @@ def put_contract(root: Path, store: Store, name: str, yaml_text: str) -> dict:
             invalidated = store.dependents_of(name, transitive=True)
             store.mark_stale([name, *invalidated])
     result = {"name": name, "hash": _short(new_hash), "changed": changed, "invalidated": invalidated}
+    # advisory provenance flags — present only when something is actually inferred
+    if data.get("status") == "inferred":
+        result["inferred"] = True
+    invalidated_inferred = [n for n in invalidated if _is_inferred(store, n)]
+    if invalidated_inferred:
+        result["invalidated_inferred"] = invalidated_inferred
     if diff:
         result["diff"] = diff
     return result
@@ -108,11 +124,34 @@ def get_dependents(root: Path, store: Store, name: str, transitive: bool = False
         raise unknown_name("unknown_contract", name, store.contract_names())
     hashes = store.contract_hashes()
     names = store.dependents_of(name, transitive=transitive)
-    return {
-        "name": name,
-        "transitive": transitive,
-        "dependents": [{"name": n, "hash": _short(hashes[n])} for n in names],
-    }
+    dependents = []
+    for n in names:
+        d = {"name": n, "hash": _short(hashes[n])}
+        if _is_inferred(store, n):
+            d["inferred"] = True  # advisory: this dependent's contract is unvetted
+        dependents.append(d)
+    return {"name": name, "transitive": transitive, "dependents": dependents}
+
+
+def _radius(store: Store, names: list[str]) -> list[str]:
+    """Each seed plus its transitive dependents, deduped in encounter order.
+
+    Spec-only units (no impl) are dropped — nothing to verify, the same rule
+    `status` uses for dirtiness. Unknown names are kept so they surface as
+    error results and fail the gate rather than vanishing silently.
+    """
+    out: list[str] = []
+    seen: set[str] = set()
+    for name in names:
+        for n in (name, *store.dependents_of(name, transitive=True)):
+            if n in seen:
+                continue
+            seen.add(n)
+            row = store.get_contract(n)
+            if row is not None and "impl" not in yaml.safe_load(row["yaml"]):
+                continue
+            out.append(n)
+    return out
 
 
 def verify(
@@ -122,10 +161,18 @@ def verify(
     python: str | None = None,
     timeout: int | float | None = None,
     pycache_trust: bool = True,
+    radius: bool = False,
 ) -> dict:
-    """Per-unit cached-pass / pass / fail. Runs pytest only on cache misses."""
+    """Per-unit cached-pass / pass / fail. Runs pytest only on cache misses.
+
+    `radius=True` widens each name to its full blast radius (itself plus every
+    transitive dependent), and the top-level `ok` is the hard pass/fail bit a
+    CI step or agent loop can block on.
+    """
     if isinstance(names, str):
         names = [names]
+    if radius:
+        names = _radius(store, names)
     if not pycache_trust:
         clear_pycache(root)  # once per batch, before any pytest run
     results = []
@@ -135,10 +182,18 @@ def verify(
             r.pop("key")  # internal cache key — pure token weight to an agent
             if not r["summary"]:
                 r.pop("summary")
+            # computed here, not in verify_one: outside the cache key, so the flag
+            # reflects *current* status even when the verdict is a cached-pass
+            inferred = [n for n in (name, *store.transitive_deps(name)) if _is_inferred(store, n)]
+            if inferred:
+                r["inferred"] = inferred
             results.append(r)
         except HeddleError as e:
             results.append({"name": name, "status": "error", **e.to_dict()})
-    return {"results": results}
+    # the gate bit: true iff every unit is green (vacuously true for an empty
+    # radius — nothing invalidated means nothing to block on)
+    ok = all(r["status"] in ("pass", "cached-pass") for r in results)
+    return {"ok": ok, "results": results}
 
 
 def cached_impl_hash(root: Path, store: Store, impl: str, contract: str | None = None) -> str:
@@ -167,8 +222,11 @@ def cached_impl_hash(root: Path, store: Store, impl: str, contract: str | None =
 def status(root: Path, store: Store) -> dict:
     """Dirty contracts, stale verifications, cache hit-rate, token counters."""
     dirty: list[str] = []
+    inferred: list[str] = []
     for name in store.contract_names():
         data, _ = _load(store, name)
+        if data.get("status") == "inferred":
+            inferred.append(name)  # the human review queue; spec-only units count too
         if "impl" not in data:
             continue  # spec-only contracts don't need verification
         try:
@@ -192,7 +250,7 @@ def status(root: Path, store: Store) -> dict:
     total = hits + misses
     br, bru = c.get("bust_rechecks", 0), c.get("bust_rechecks_unchanged", 0)
     tokens_by_tool = {k.removeprefix("tokens."): v for k, v in c.items() if k.startswith("tokens.")}
-    return {
+    out = {
         "contracts": len(store.contract_names()),
         "dirty": dirty,
         "stale_verifications": store.stale_verifications(),
@@ -211,3 +269,6 @@ def status(root: Path, store: Store) -> dict:
         },
         "tokens": {"total": sum(tokens_by_tool.values()), "by_tool": tokens_by_tool},
     }
+    if inferred:  # key absent on confirmed-only projects — zero token cost
+        out["inferred"] = inferred
+    return out

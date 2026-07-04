@@ -52,6 +52,11 @@ results."
   `status` reports a `rechecks` block: re-verifications triggered by a hash bust
   and how many changed no verdict (`wasted_rate`), measuring how much
   re-verification is cosmetic.
+- ✓ **Contract provenance** (shipped): `status: inferred | confirmed` marks
+  whether a contract has been human-reviewed; tools warn (never refuse) when a
+  blast-radius or verification answer rests on an inferred contract. Absent =
+  confirmed; excluded from the hash, so confirming is free. A strict mode that
+  refuses instead of warns is deferred by design.
 
 ## v0.3+ — bigger bets
 

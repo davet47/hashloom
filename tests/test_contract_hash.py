@@ -82,6 +82,19 @@ def test_invariant_order_does_not_change_hash():
     assert h(swapped) == h(BASE)
 
 
+def test_status_does_not_change_hash():
+    # status is provenance, not meaning: adding it or flipping it never
+    # invalidates — confirming an inferred contract must be free
+    assert h(BASE + "status: inferred\n") == h(BASE)
+    assert h(BASE + "status: confirmed\n") == h(BASE)
+
+
+def test_invalid_status_rejected():
+    with pytest.raises(HeddleError) as exc:
+        parse_contract(BASE + "status: draft\n")
+    assert exc.value.code == "invalid_shape"
+
+
 def test_signature_change_changes_hash():
     changed = BASE.replace("dict[Region, float]", "dict[Region, int]")
     assert h(changed) != h(BASE)

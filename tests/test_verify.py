@@ -123,6 +123,85 @@ def test_verify_spec_only_contract_errors_cleanly(project):
     assert by_name["missing_one"]["error"]["code"] == "unknown_contract"
 
 
+def test_ok_bit_is_the_gate(project):
+    root, store = project
+    assert api.verify(root, store, ["total", "report"])["ok"] is True
+    calc = root / "src" / "calc.py"
+    calc.write_text(calc.read_text().replace("if i.ok", "if True"))
+    assert api.verify(root, store, ["total", "report"])["ok"] is False
+    # an error (spec-only, unknown name) blocks the gate too — unverifiable != verified
+    assert api.verify(root, store, ["Item"])["ok"] is False
+    assert api.verify(root, store, ["nope"])["ok"] is False
+
+
+def test_radius_verifies_the_blast_radius_in_one_call(project):
+    root, store = project
+    # Item is spec-only: it drops out of the expansion, its dependents gate
+    out = api.verify(root, store, ["Item"], radius=True)
+    assert {r["name"] for r in out["results"]} == {"total", "report"}
+    assert out["ok"] is True
+    # a broken dependent anywhere in the radius blocks the gate
+    calc = root / "src" / "calc.py"
+    calc.write_text(calc.read_text().replace("if i.ok", "if True"))
+    out = api.verify(root, store, ["Item"], radius=True)
+    assert out["ok"] is False
+    assert {r["name"]: r["status"] for r in out["results"]}["total"] == "fail"
+
+
+def test_radius_dedupes_and_keeps_unknown_names(project):
+    root, store = project
+    # total's radius overlaps report's; each unit is verified once
+    out = api.verify(root, store, ["total", "report"], radius=True)
+    names = [r["name"] for r in out["results"]]
+    assert sorted(names) == ["report", "total"] and len(names) == len(set(names))
+    # a typo doesn't vanish into an empty radius — it errors and blocks
+    out = api.verify(root, store, ["nope"], radius=True)
+    assert out["ok"] is False
+    assert out["results"][0]["error"]["code"] == "unknown_contract"
+
+
+def test_radius_of_spec_only_leaf_is_vacuously_green(project):
+    root, store = project
+    write_contract(root, "Lonely", """
+        name: Lonely
+        signature: "dataclass: tag: str"
+    """)
+    index(root, store)
+    # nothing depends on it and it has no impl: nothing invalidated, gate opens
+    out = api.verify(root, store, ["Lonely"], radius=True)
+    assert out == {"ok": True, "results": []}
+
+
+def test_verify_flags_inferred_closure_even_on_cached_pass(project):
+    root, store = project
+    text = (root / "contracts" / "total.yaml").read_text()
+    api.put_contract(root, store, "total", text + "status: inferred\n")
+    # first run: verdict is machine-true, but it rests on an unvetted contract
+    out = api.verify(root, store, ["total", "report"])
+    by_name = {r["name"]: r for r in out["results"]}
+    assert by_name["total"]["status"] == "pass"
+    assert by_name["total"]["inferred"] == ["total"]
+    assert by_name["report"]["inferred"] == ["total"]  # transitive dep is inferred
+    # the flag is computed outside the cache key, so cached-pass carries it too
+    out = api.verify(root, store, ["total"])
+    assert out["results"][0]["status"] == "cached-pass"
+    assert out["results"][0]["inferred"] == ["total"]
+
+
+def test_confirming_inferred_contract_keeps_cached_green(project):
+    root, store = project
+    text = (root / "contracts" / "total.yaml").read_text()
+    api.put_contract(root, store, "total", text + "status: inferred\n")
+    assert statuses(api.verify(root, store, ["total", "report"])) == {"total": "pass", "report": "pass"}
+    runs_before = store.counters()["test_runs"]
+    # the review flip: inferred -> confirmed must not bust any cached green
+    api.put_contract(root, store, "total", text)
+    out = api.verify(root, store, ["total", "report"])
+    assert statuses(out) == {"total": "cached-pass", "report": "cached-pass"}
+    assert store.counters()["test_runs"] == runs_before
+    assert all("inferred" not in r for r in out["results"])
+
+
 def test_status_reports_dirty_and_hit_rate(project):
     root, store = project
     s = api.status(root, store)

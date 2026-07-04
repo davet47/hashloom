@@ -51,24 +51,31 @@ def build_server(
     def put_contract(name: str, yaml_text: str) -> dict:
         """Create or update a contract (validates shape, rejects unknown deps).
         Writes contracts/<name>.yaml and returns the new hash plus every
-        dependent whose cached verification this change invalidates."""
+        dependent whose cached verification this change invalidates; inferred
+        (machine-derived, unreviewed) contracts among them are flagged."""
         return _respond("put_contract", lambda: api.put_contract(root, store, name, yaml_text))
 
     @mcp.tool()
     def get_dependents(name: str, transitive: bool = False) -> dict:
         """Blast-radius query: contracts that depend on `name` (direct, or the
-        full transitive closure), with their current hashes."""
+        full transitive closure), with their current hashes. Entries not yet
+        human-reviewed carry `inferred: true` (advisory — never an error)."""
         return _respond("get_dependents", lambda: api.get_dependents(root, store, name, transitive))
 
     @mcp.tool()
-    def verify(names: list[str]) -> dict:
+    def verify(names: list[str], radius: bool = False) -> dict:
         """Verify contracts against their pytest node IDs. Returns per-unit
         cached-pass / pass / fail with a ≤40-token failure summary. Runs
         pytest only for units whose (contract, impl, deps) hash key is not
-        already green in the cache."""
+        already green in the cache. `radius=true` widens each name to its full
+        blast radius (itself plus every transitive dependent); the top-level
+        `ok` is the hard pass/fail to gate on. An `inferred` list names any
+        unconfirmed contracts a verdict rests on."""
         return _respond(
             "verify",
-            lambda: api.verify(root, store, names, python=python, timeout=timeout, pycache_trust=trust),
+            lambda: api.verify(
+                root, store, names, python=python, timeout=timeout, pycache_trust=trust, radius=radius
+            ),
         )
 
     @mcp.tool()

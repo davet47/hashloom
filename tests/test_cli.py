@@ -38,6 +38,23 @@ def test_verify_cli_fails_with_nonzero_exit(project, monkeypatch, capsys):
     assert out["results"][0]["status"] == "fail"
 
 
+def test_verify_cli_radius_gates_the_blast_radius(project, monkeypatch, capsys):
+    root, _ = project
+    monkeypatch.chdir(root)
+    # Item is spec-only, so --radius gates its dependents (total, report)
+    rc = main(["verify", "--radius", "Item"])
+    out = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert out["ok"] is True
+    assert {r["name"] for r in out["results"]} == {"total", "report"}
+    calc = root / "src" / "calc.py"
+    calc.write_text(calc.read_text().replace("if i.ok", "if True"))
+    rc = main(["verify", "--radius", "Item"])
+    out = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert out["ok"] is False
+
+
 def test_verify_cli_unknown_contract_errors_nonzero(project, monkeypatch, capsys):
     root, _ = project
     monkeypatch.chdir(root)

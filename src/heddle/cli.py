@@ -32,6 +32,11 @@ def main(argv: list[str] | None = None) -> int:
     verify_parser = sub.add_parser("verify", help="run cached verification for one or more contracts")
     verify_parser.add_argument("names", nargs="+", metavar="NAME", help="contract names to verify")
     verify_parser.add_argument(
+        "--radius",
+        action="store_true",
+        help="also verify every transitive dependent of each NAME (the blast radius)",
+    )
+    verify_parser.add_argument(
         "--python",
         metavar="PATH",
         help="interpreter to run pytest with (default: project .venv, else this interpreter)",
@@ -77,10 +82,10 @@ def main(argv: list[str] | None = None) -> int:
             from .config import resolve_pycache_trust
 
             trust = resolve_pycache_trust(root, override=False if args.no_pycache_trust else None)
-            result = api.verify(root, store, args.names, python=args.python, pycache_trust=trust)
+            result = api.verify(root, store, args.names, python=args.python, pycache_trust=trust, radius=args.radius)
             print(json.dumps(result, indent=2))
-            # nonzero if any unit failed or errored — usable as a CI/pre-commit gate
-            if any(r["status"] in ("fail", "error") for r in result["results"]):
+            # the CI/pre-commit gate: exit mirrors the response's `ok` bit
+            if not result["ok"]:
                 return 1
         return 0
     except HeddleError as e:

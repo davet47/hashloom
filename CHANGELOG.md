@@ -7,6 +7,23 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Gate-shaped verification: `verify` responses carry a top-level `ok` — true iff
+  every unit is `pass`/`cached-pass` (failures, unknown names, and unverifiable
+  units all gate) — and a `radius` option (`heddle verify --radius NAME`, MCP
+  `verify(names, radius=true)`) widens each name to itself plus every transitive
+  dependent, spec-only units dropped. One call = a hard pass/fail for a change's
+  whole blast radius; the CLI exit code mirrors `ok`, so a CI step or agent loop
+  can block on it. No new tools/commands.
+- Contract provenance: an optional `status: inferred | confirmed` field on
+  contracts. `inferred` marks a contract reverse-engineered from code and not
+  yet human-reviewed; tools warn — never refuse — when a decision rests on one
+  (`inferred: true` on `get_dependents`/`get_contract` dep entries, `inferred`
+  and `invalidated_inferred` on `put_contract`, an `inferred` list on `verify`
+  results, and a review-queue list in `status`). Absent = `confirmed`, so
+  existing contracts are unaffected, and the field is excluded from the contract
+  hash, so confirming an inferred contract after review invalidates nothing and
+  busts no cached green. The 5-tool / 5-CLI surface is unchanged; every new
+  response key appears only when an inferred contract is actually involved.
 - Remote shared verification cache (transport): a `RemoteStore` client and a
   stdlib `python -m heddle.cache_server` (a bearer-token JSON HTTP service over a
   `SqliteStore`) let a team share verdicts and impl blobs across machines —

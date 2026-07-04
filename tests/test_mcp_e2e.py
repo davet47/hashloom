@@ -41,12 +41,13 @@ def test_all_five_tools_over_stdio(project):
     new_yaml = (root / "contracts" / "total.yaml").read_text().replace(
         "(items: list[Item]) -> float", "(items: list[Item]) -> int"
     )
-    tools, packet, deps, verified, put, status = call(
+    tools, packet, deps, verified, gated, put, status = call(
         root,
         [
             ("get_contract", {"name": "report"}),
             ("get_dependents", {"name": "Item", "transitive": True}),
             ("verify", {"names": ["total", "report"]}),
+            ("verify", {"names": ["Item"], "radius": True}),
             ("put_contract", {"name": "total", "yaml_text": new_yaml}),
             ("status", {}),
         ],
@@ -59,7 +60,15 @@ def test_all_five_tools_over_stdio(project):
 
     assert [d["name"] for d in deps["dependents"]] == ["report", "total"]
 
+    assert verified["ok"] is True  # the single bit an agent loop gates on
     assert {r["name"]: r["status"] for r in verified["results"]} == {"total": "pass", "report": "pass"}
+
+    # one call gates Item's whole blast radius (both greens now served from cache)
+    assert gated["ok"] is True
+    assert {r["name"]: r["status"] for r in gated["results"]} == {
+        "total": "cached-pass",
+        "report": "cached-pass",
+    }
 
     assert put["changed"] is True and put["invalidated"] == ["report"]
 
@@ -85,3 +94,24 @@ def test_errors_are_structured_over_stdio(project):
     assert "nearest: 'report'" in missing["error"]["message"]
     assert bad_dep["error"]["code"] == "unknown_dep"
     assert "nearest: 'Item'" in bad_dep["error"]["message"]
+
+
+@pytest.mark.e2e
+def test_inferred_flags_round_trip_over_stdio(project):
+    root, store = project
+    store.close()
+
+    inferred_yaml = (root / "contracts" / "total.yaml").read_text() + "status: inferred\n"
+    _, put, deps, packet = call(
+        root,
+        [
+            ("put_contract", {"name": "total", "yaml_text": inferred_yaml}),
+            ("get_dependents", {"name": "Item", "transitive": True}),
+            ("get_contract", {"name": "report"}),
+        ],
+    )
+    assert put["inferred"] is True and put["changed"] is False
+    by_name = {d["name"]: d for d in deps["dependents"]}
+    assert by_name["total"]["inferred"] is True
+    assert "inferred" not in by_name["report"]
+    assert {d["name"]: d.get("inferred") for d in packet["deps"]} == {"Item": None, "total": True}

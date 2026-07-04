@@ -61,6 +61,15 @@ def test_impl_and_tests_reported_though_excluded_from_hash():
     }
 
 
+def test_status_flip_reported_though_excluded_from_hash():
+    # absent = confirmed, so removing the field reads as a flip to confirmed...
+    assert diff_contracts(_c(status="inferred"), _c()) == {
+        "status": {"old": "inferred", "new": "confirmed"}
+    }
+    # ...and spelling out the default is no change at all
+    assert diff_contracts(_c(), _c(status="confirmed")) == {}
+
+
 def test_cosmetic_only_edit_is_empty():
     # whitespace is normalised away, exactly as the hash does
     assert (
@@ -102,6 +111,20 @@ def test_put_contract_cosmetic_edit_has_no_diff(project):
     out = api.put_contract(root, store, "total", text + "\n# trailing comment\n")
     assert out["changed"] is False
     assert "diff" not in out
+
+
+def test_put_contract_status_only_flip_changes_nothing(project):
+    root, store = project
+    text = (root / "contracts" / "total.yaml").read_text()
+    marked = api.put_contract(root, store, "total", text + "status: inferred\n")
+    assert marked["changed"] is False
+    assert marked["invalidated"] == []
+    assert marked["diff"]["status"] == {"old": "confirmed", "new": "inferred"}
+    # confirming it back is equally free: no hash change, no invalidation
+    confirmed = api.put_contract(root, store, "total", text)
+    assert confirmed["changed"] is False
+    assert confirmed["invalidated"] == []
+    assert confirmed["diff"]["status"] == {"old": "inferred", "new": "confirmed"}
 
 
 def test_put_contract_new_contract_has_no_diff(project):

@@ -2,8 +2,9 @@
 
 The contract hash is sha256 over a canonical form: keys sorted, whitespace
 normalised, comments stripped (free with YAML parsing), example order preserved
-(order is meaning), deps sorted (order is not), and `impl`, `tests`, and
-`invariants` excluded (invariants are free-text docs; the tests are the check).
+(order is meaning), deps sorted (order is not), and `impl`, `tests`,
+`invariants`, and `status` excluded (invariants are free-text docs; the tests
+are the check; status is provenance, so confirming a contract never invalidates).
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ import yaml
 from .errors import HeddleError
 
 REQUIRED_KEYS = ("name", "signature")
-OPTIONAL_KEYS = ("deps", "invariants", "examples", "tests", "impl")
+OPTIONAL_KEYS = ("deps", "invariants", "examples", "tests", "impl", "status")
 ALLOWED_KEYS = set(REQUIRED_KEYS) | set(OPTIONAL_KEYS)
 # Keys excluded from the hash: relocating impl/test files must not invalidate.
 HASH_EXCLUDED = {"impl", "tests"}
@@ -94,6 +95,11 @@ def parse_contract(text: str, expect_name: str | None = None) -> dict:
         if not isinstance(impl, str) or "::" not in impl:
             raise HeddleError("invalid_shape", "'impl' must be 'path/to/file.py::function_name'", contract=name)
 
+    if "status" in data:
+        # tuple membership also rejects YAML-coerced non-strings (status: true)
+        if data["status"] not in ("inferred", "confirmed"):
+            raise HeddleError("invalid_shape", "'status' must be 'inferred' or 'confirmed'", contract=name)
+
     return data
 
 
@@ -106,6 +112,8 @@ def canonical_form(data: dict) -> str:
         "deps": sorted(_norm(d) for d in data.get("deps", [])),
         # invariants are excluded (#19): free-text docs, not a machine obligation;
         # the real check is the tests, whose source is in the verification key.
+        # status is excluded too: provenance, not meaning — confirming an inferred
+        # contract must never invalidate dependents or bust a cached green.
         # example order is meaning — preserved
         "examples": [{"in": _norm(ex["in"]), "out": _norm(ex["out"])} for ex in data.get("examples", [])],
     }
@@ -195,5 +203,10 @@ def diff_contracts(old: dict, new: dict) -> dict:
     n_tests = [_norm(t) for t in new.get("tests", [])]
     if o_tests != n_tests:
         diff["tests"] = {"old": old.get("tests", []), "new": new.get("tests", [])}
+
+    # status is excluded from the hash, but a flip is real — absent = confirmed
+    o_st, n_st = old.get("status", "confirmed"), new.get("status", "confirmed")
+    if o_st != n_st:
+        diff["status"] = {"old": o_st, "new": n_st}
 
     return diff

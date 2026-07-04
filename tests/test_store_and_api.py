@@ -168,3 +168,66 @@ def test_put_blob_is_content_addressed_and_round_trips(tmp_path):
         assert store.get_blob("0" * 64) is None
     finally:
         store.close()
+
+
+# --- inferred vs confirmed: advisory provenance flags, absent when confirmed ---
+
+
+def _mark_inferred(root, store, name: str) -> None:
+    text = (root / "contracts" / f"{name}.yaml").read_text()
+    api.put_contract(root, store, name, text + "status: inferred\n")
+
+
+def test_get_dependents_flags_inferred(project):
+    root, store = project
+    _mark_inferred(root, store, "total")
+    out = api.get_dependents(root, store, "Item", transitive=True)
+    by_name = {d["name"]: d for d in out["dependents"]}
+    assert by_name["total"]["inferred"] is True
+    assert "inferred" not in by_name["report"]  # confirmed entries carry no key
+
+
+def test_put_contract_flags_inferred_writes_and_dependents(project):
+    root, store = project
+    _mark_inferred(root, store, "report")
+    # writing an inferred contract echoes the flag
+    text = (root / "contracts" / "report.yaml").read_text()
+    out = api.put_contract(root, store, "report", text)
+    assert out["inferred"] is True
+    # a real change to Item invalidates report (inferred) and total (confirmed)
+    item = (root / "contracts" / "Item.yaml").read_text().replace(
+        "value: float, ok: bool", "value: float, ok: bool, tag: str"
+    )
+    out = api.put_contract(root, store, "Item", item)
+    assert out["changed"] is True
+    assert set(out["invalidated"]) == {"report", "total"}
+    assert out["invalidated_inferred"] == ["report"]
+    assert "inferred" not in out  # Item itself is confirmed
+
+
+def test_confirmed_only_responses_carry_no_inferred_keys(project):
+    root, store = project
+    deps = api.get_dependents(root, store, "Item", transitive=True)
+    assert all("inferred" not in d for d in deps["dependents"])
+    packet = api.get_contract(root, store, "report")
+    assert all("inferred" not in d for d in packet["deps"])
+    assert "status" not in packet["contract"]
+    assert "inferred" not in api.status(root, store)
+
+
+def test_get_contract_carries_status_and_flags_inferred_deps(project):
+    root, store = project
+    _mark_inferred(root, store, "total")
+    packet = api.get_contract(root, store, "total")
+    assert packet["contract"]["status"] == "inferred"
+    report = api.get_contract(root, store, "report")
+    by_name = {d["name"]: d for d in report["deps"]}
+    assert by_name["total"]["inferred"] is True
+    assert "inferred" not in by_name["Item"]
+
+
+def test_status_lists_inferred_including_spec_only(project):
+    root, store = project
+    _mark_inferred(root, store, "Item")  # spec-only units can be inferred too
+    _mark_inferred(root, store, "total")
+    assert api.status(root, store)["inferred"] == ["Item", "total"]
