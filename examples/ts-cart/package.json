@@ -1,0 +1,9 @@
+{
+  "name": "ts-cart",
+  "private": true,
+  "type": "module",
+  "description": "heddle sample project: a shopping cart in TypeScript, verified with Node's built-in node:test.",
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

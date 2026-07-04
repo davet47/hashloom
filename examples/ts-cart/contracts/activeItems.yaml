@@ -1,0 +1,11 @@
+name: activeItems
+signature: "function activeItems(items: LineItem[]): LineItem[]"
+deps: [LineItem]
+invariants:
+  - excludes rows where savedForLater is true
+  - preserves input order
+examples:
+  - in: "[A active, B saved, C active]"
+    out: "[A, C]"
+tests: ["cart/filters.test.ts::activeItems drops saved-for-later rows and keeps order"]
+impl: cart/filters.ts::activeItems

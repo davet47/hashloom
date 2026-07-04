@@ -7,6 +7,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- A TypeScript sample project, `examples/ts-cart`: 8 contracts over a shopping
+  cart (interface/type-alias contracts included), exercising the TypeScript
+  adapter end to end — canonical-AST impl hashing via the project's own
+  `typescript`, `node:test` verification under type stripping, and the
+  `verify --radius` gate.
 - A Go sample project, `examples/go-ledger`: 8 contracts over a small
   double-entry ledger (struct/type contracts included), exercising the Go
   adapter end to end — AST-stable impl hashing, `go test -json` verification,

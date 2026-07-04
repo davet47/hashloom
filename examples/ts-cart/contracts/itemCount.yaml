@@ -1,0 +1,10 @@
+name: itemCount
+signature: "function itemCount(items: LineItem[]): number"
+deps: [LineItem, activeItems]
+invariants:
+  - sums qty over active rows only
+examples:
+  - in: "qty 2 active, qty 1 active, qty 3 saved"
+    out: "3"
+tests: ["cart/totals.test.ts::itemCount sums quantities of active rows"]
+impl: cart/totals.ts::itemCount

@@ -1,0 +1,11 @@
+name: subtotalCents
+signature: "function subtotalCents(items: LineItem[]): number"
+deps: [LineItem, activeItems]
+invariants:
+  - sums unitCents times qty over active rows only
+  - an empty cart subtotals to zero
+examples:
+  - in: "2 x 1000c active, 1 x 250c active, 3 x 9999c saved"
+    out: "2250"
+tests: ["cart/totals.test.ts::subtotalCents sums unitCents times qty over active rows"]
+impl: cart/totals.ts::subtotalCents
