@@ -43,12 +43,12 @@ Same three regeneration tasks on a 20-contract sample project, once with raw fil
 
 Raw mode counts what a file-based agent reads per task: the unit's spec file, every transitive dep's spec file, every source module in the dep closure, the unit's test file, and the output of running the suite. It is deliberately generous to the baseline: it assumes the agent already knows the exact dependency closure, which is precisely the thing heddle computes for you.
 
-The same methodology on a real project scores higher, not lower: a 43-contract
-energy digital twin — built with heddle but not for it — measures **9.1×**
-across a full sweep of every unit (median 7.9×, up to ~40× on the deepest
-units), because real dependency structure runs deeper than a demo's. All the
-numbers, their distributions, and the honest caveats live in
-[docs/benchmarks.md](docs/benchmarks.md).
+The same methodology sweeps *every* unit of all three example projects —
+Python, Go, and TypeScript — via `bench/sweep.py`, and works on any heddle
+project including yours. Full sweeps average lower than the gate (they count
+the leaf types that barely benefit); the ratio tracks dependency depth, so
+deeper projects score higher. All the numbers, their distributions, and the
+honest caveats live in [docs/benchmarks.md](docs/benchmarks.md).
 
 ## Quickstart
 
@@ -182,10 +182,10 @@ heddle init && heddle index && heddle serve   # then point your agent at it
 
 20 contracts, 25 tests, three dependency layers deep.
 
-There is a Go twin at `examples/go-ledger` (8 contracts over a small
+There are counterpart examples in Go at `examples/go-ledger` (8 contracts over a small
 double-entry ledger, same loop: `heddle init && heddle index`, then
 `heddle verify --radius Entry` gates the blast radius with `go test` under the
-hood — needs a Go toolchain), and a TypeScript twin at `examples/ts-cart`
+hood — needs a Go toolchain) and in TypeScript at `examples/ts-cart`
 (8 contracts over a shopping cart; `npm install` first for its `typescript`,
 then the same loop — verification runs on Node's built-in `node:test`, Node
 >= 22.6).
