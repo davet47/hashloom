@@ -181,7 +181,7 @@ uv run pytest             # full suite; hash stability is the load-bearing suite
 uv run python bench/benchmark.py
 ```
 
-Python-only and single-process by design for v0.1. Everything not in this README is an [issue](ISSUES.md).
+Kept deliberately small: 5 MCP tools, 5 CLI commands, contracts as plain YAML. Everything not in this README is an [issue](ISSUES.md).
 
 ## License
 
