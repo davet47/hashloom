@@ -97,7 +97,7 @@ A contract an agent reverse-engineers from existing code can declare that it has
 
 - **Contract hash**: sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, example order preserved, dep order ignored. `impl`, `tests`, `invariants`, and `status` are excluded, so **relocating files never invalidates**, rewording an invariant is free, and confirming an inferred contract never invalidates anything. Invariants are documentation, not a machine obligation; the real check is the tests, whose source is in the verification key.
 - **Impl hash**: sha256 over the normalised AST of the implementation, so reformatting and comment edits never bust the cache. Docstrings are stripped too.
-- **Verification key**: `(contract hash, impl hash, test-source hash, transitive dep contract hashes)`. Heddle caches verification results, keyed so that a change to any contract in the closure, to the implementation, or to a test's own source forces a re-run. Failures are never served from cache. Two caveats. A cached pass assumes deterministic tests, so a green result that depended on wall-clock time, network, or randomness can outlive the condition that made it pass. And the test-source hash covers each test function's own normalised AST, not the conftest fixtures or helpers it calls, so changing only those will not force a re-run yet (see [Roadmap](ROADMAP.md)).
+- **Verification key**: `(contract hash, impl hash, test-source hash, toolchain identity, transitive dep contract hashes)`. Heddle caches verification results, keyed so that a change to any contract in the closure, to the implementation, to a test's own source, or to the toolchain version forces a re-run. The toolchain component (`python 3.11.7`, `go 1.21.5`, `node <v> ts <v>`) is what makes a shared or cross-machine green sound: a 3.11 pass is never served to 3.13. Failures are never served from cache. Two caveats. A cached pass assumes deterministic tests, so a green result that depended on wall-clock time, network, or randomness can outlive the condition that made it pass. And the test-source hash covers each test function's own normalised AST, not the conftest fixtures or helpers it calls, so changing only those will not force a re-run yet (see [Roadmap](ROADMAP.md)).
 
 ## MCP tools (the entire surface)
 
@@ -106,7 +106,7 @@ A contract an agent reverse-engineers from existing code can declare that it has
 | `get_contract` | the ~300-token context packet: contract + hash + one-line dep signatures + caller list |
 | `put_contract` | validate, write `contracts/<name>.yaml`, return new hash, a semantic diff of what changed, and every invalidated dependent |
 | `get_dependents` | blast-radius query, direct or transitive, names + hashes; inferred (unreviewed) contracts flagged |
-| `verify` | per-unit `cached-pass` / `pass` / `fail` plus a top-level `ok` gate bit; `radius=true` widens each name to its full blast radius; runs pytest only on cache misses; failures come back as a ≤40-token assertion summary, never a traceback; inferred contracts in the closure flagged |
+| `verify` | per-unit `cached-pass` / `pass` / `fail` plus a top-level `ok` gate bit; `radius=true` widens each name to its full blast radius; runs tests only on cache misses; failures come back as a ≤40-token assertion summary, never a traceback; inferred contracts in the closure flagged |
 | `status` | dirty contracts, stale verifications, cache hit-rate, resolved verify interpreter, cumulative token counters |
 
 Every tool returns structured errors — `{"error": {"code": "unknown_dep", "message": "'Regoin' not found — nearest: 'Region'"}}` — never a stack trace.
@@ -124,6 +124,39 @@ default 300) for suites that need longer than the default, and `pycache_trust`
 (default `true`); set `pycache_trust: false` — or pass `--no-pycache-trust` — to
 clear the project's `__pycache__` before each verify run, so a stale `.pyc` can
 never shadow the current source.
+
+### Beyond Python
+
+The impl's file extension picks the language adapter — each brings a
+normalised-AST hasher and a test runner, so the same cosmetic-vs-meaning hashing
+semantics hold per language:
+
+- **Go** (`.go`): hashes via the stdlib `go/ast`, runs `go test -json`. Toolchain
+  resolves like the interpreter: `.heddle/config.json` `{"go": "..."}`, else `go`
+  on PATH.
+- **TypeScript** (`.ts`/`.tsx`/`.mts`/`.cts`): hashes via the target project's
+  *own* `typescript` compiler API, auto-detects the test runner from
+  `package.json` (vitest / jest, else Node's built-in `node:test`). Needs Node
+  >= 22.6; config key `{"node": "..."}`.
+
+Python stays the default; a project can mix languages freely.
+
+### Team-shared verification cache
+
+By default the cache lives in your local `.heddle/store.db`. Point it at a shared
+backend and one green verify serves the whole team — CI verifies a unit once and
+every teammate's agent gets `cached-pass`:
+
+```jsonc
+// .heddle/config.json
+{"shared": {"url": "https://cache.internal:8770", "token": "..."}}
+```
+
+Run the backend anywhere with `python -m heddle.cache_server` (a small
+bearer-token HTTP service over a SQLite store; an operational process, not a CLI
+command). Only greens are published — failures never cross the boundary — and the
+toolchain-in-key rule above keeps a shared green sound across machines. If the
+shared store is unreachable, verify degrades silently to local.
 
 ## CLI
 
