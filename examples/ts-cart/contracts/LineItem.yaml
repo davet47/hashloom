@@ -1,0 +1,11 @@
+name: LineItem
+signature: "interface LineItem { sku: Sku; unitCents: number; qty: number; savedForLater: boolean }"
+deps: [Sku]
+invariants:
+  - prices are integer cents, never floats
+  - savedForLater rows are invisible to every total
+examples:
+  - in: '{ sku: "WIDGET-1", unitCents: 1250, qty: 2, savedForLater: false }'
+    out: "two $12.50 widgets in the cart proper"
+tests: ["cart/types.test.ts::LineItem carries sku, unitCents, qty, savedForLater"]
+impl: cart/types.ts::LineItem

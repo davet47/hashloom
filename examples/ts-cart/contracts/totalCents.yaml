@@ -1,0 +1,10 @@
+name: totalCents
+signature: "function totalCents(items: LineItem[], discountPercent: number): number"
+deps: [LineItem, subtotalCents, discountCents]
+invariants:
+  - the discount applies to the active subtotal, never to saved rows
+examples:
+  - in: "2000c active subtotal at 10 percent"
+    out: "1800"
+tests: ["cart/pricing.test.ts::totalCents applies the discount to the active subtotal"]
+impl: cart/pricing.ts::totalCents

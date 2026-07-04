@@ -1,0 +1,9 @@
+name: discountCents
+signature: "function discountCents(cents: number, percent: number): number"
+invariants:
+  - rounds down, so a fractional cent always favours the customer
+examples:
+  - in: "999 cents at 10 percent"
+    out: "99"
+tests: ["cart/pricing.test.ts::discountCents floors in the customer's favour"]
+impl: cart/pricing.ts::discountCents

@@ -1,0 +1,9 @@
+name: Sku
+signature: "type Sku = string"
+invariants:
+  - identifies a product line by stock-keeping unit
+examples:
+  - in: '"WIDGET-1"'
+    out: "a valid Sku"
+tests: ["cart/types.test.ts::Sku is a plain string id"]
+impl: cart/types.ts::Sku

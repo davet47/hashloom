@@ -176,7 +176,10 @@ heddle init && heddle index && heddle serve   # then point your agent at it
 There is a Go twin at `examples/go-ledger` (8 contracts over a small
 double-entry ledger, same loop: `heddle init && heddle index`, then
 `heddle verify --radius Entry` gates the blast radius with `go test` under the
-hood — needs a Go toolchain).
+hood — needs a Go toolchain), and a TypeScript twin at `examples/ts-cart`
+(8 contracts over a shopping cart; `npm install` first for its `typescript`,
+then the same loop — verification runs on Node's built-in `node:test`, Node
+>= 22.6).
 
 ## Development
 

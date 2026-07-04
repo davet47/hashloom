@@ -1,0 +1,12 @@
+name: formatPrice
+signature: "function formatPrice(cents: number): string"
+invariants:
+  - two decimal places, always
+  - negative amounts render the sign before the dollar symbol
+examples:
+  - in: "1234"
+    out: '"$12.34"'
+  - in: "-50"
+    out: '"-$0.50"'
+tests: ["cart/pricing.test.ts::formatPrice renders cents as dollars"]
+impl: cart/pricing.ts::formatPrice
