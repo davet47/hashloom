@@ -43,6 +43,11 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
   function's own AST, not the conftest fixtures and helpers it calls; changing
   only those does not force a re-run yet. The README documents this caveat;
   closing it is the next precision/soundness item.
+- **The deterministic-test caveat** — a cached green assumes deterministic
+  tests, so a pass that depended on wall-clock time, network, or randomness can
+  outlive the condition that made it pass. The README states the caveat
+  honestly; shrinking it (flakiness detection, an optional re-verify TTL, or
+  marking tests untrusted-for-caching) is open design work, not yet scheduled.
 - **Strict provenance mode** ([#49](https://github.com/davet47/heddle/issues/49))
   — an opt-in config that upgrades inferred-contract warnings to structured
   refusals, for teams that want unvetted contracts to hard-fail. Deferred by
