@@ -7,15 +7,20 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
-- A benchmark scorecard, `docs/benchmarks.md`: every token-reduction number in
-  one place — the sales-example DoD gate (5.4×), the enora-twin real-project
-  full sweep (9.1× across 43 contracts, median 7.9×, run under heddle 0.3.0),
-  live cache-economics counters from both dogfood stores, and the concessions
-  any public claim should carry (closure knowledge granted free to the
-  baseline; first-try-green assumed for heddle; per-change estimate, not a
-  session total; initial build costs more). Ratios are deterministic tiktoken
-  counts, so the driving model is recorded as run provenance, not a variable.
-  The README's "The number" section links to it.
+- A benchmark scorecard, `docs/benchmarks.md`, and a full-sweep benchmark,
+  `bench/sweep.py`: the scorecard holds every published token-reduction
+  number — the sales DoD gate (5.4×) plus full sweeps of all three example
+  projects (sales 4.1×, go-ledger 3.0×, ts-cart 3.1× — sweeps count the leaf
+  units the gate doesn't, so they average lower by construction), the
+  dogfood store's cache counters, and the concessions any public claim
+  should carry (closure knowledge granted free to the baseline;
+  first-try-green assumed for heddle; per-change estimate, not a session
+  total; initial build costs more). `sweep.py` runs the same accounting over
+  every verifiable unit of any heddle project, language-aware only in the
+  suite runner (pytest / `go test` / `node --test`). Every scorecard row is
+  reproducible from this repo alone; ratios are deterministic tiktoken
+  counts and independent of what drives the session. The README's "The
+  number" section links to it.
 
 ## [0.3.0] - 2026-07-04
 

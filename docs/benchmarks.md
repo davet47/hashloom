@@ -1,80 +1,77 @@
 # Benchmarks — the scorecard
 
-Every token-reduction number heddle has produced, in one place: what was
-measured, on what project, when, under which heddle, and who was driving.
+Every token-reduction number heddle publishes, in one place: what was measured,
+on what project, when, under which heddle version. **Every row is reproducible
+from this repo** — the projects are in `examples/`, the scripts in `bench/`.
 
 All ratios are deterministic token counts — both sides of every comparison are
-counted with the same tiktoken encoder (`cl100k`), so **the ratio does not
-depend on the AI model driving the session**. The driving model is recorded as
-provenance of each run, not as a variable in the result; the twin's ratio
-moving only 9.2× → 9.1× across a month, a heddle upgrade, and a change of
-driving model is itself evidence the metric is stable.
+counted with the same tiktoken encoder (`cl100k`). They do not depend on which
+AI model (or human) drives the session, only on the project's shape and the
+heddle version.
 
 ## Headline numbers
 
-| scenario | scope | raw tokens | heddle tokens | ratio | median/unit | date | heddle | run driven by |
-|---|---|--:|--:|--:|--:|---|---|---|
-| sales example (DoD gate) | 3 tasks over 20 contracts | 6,004 | 1,117 | **5.4×** | — | 2026-07-04 | 0.3.0 | CI (mechanical, every push) |
-| enora twin, full sweep | all 43 contracts, each regenerated once | 170,789 | 18,722 | **9.1×** | 7.9× | 2026-07-04 | 0.3.0 | Claude Fable 5 session |
-| enora twin, prior run | all 43 contracts | — | — | ~9.2× | — | 2026-06-14 | 0.1.x | Claude Opus session |
+| scenario | scope | raw tokens | heddle tokens | ratio | median/unit | date | heddle |
+|---|---|--:|--:|--:|--:|---|---|
+| sales (Python) — the DoD gate | 3 regeneration tasks over 20 contracts | 6,004 | 1,117 | **5.4×** | — | 2026-07-04 | 0.3.0 |
+| sales (Python) — full sweep | all 19 verifiable units | 31,495 | 7,618 | **4.1×** | 4.8× | 2026-07-04 | 0.3.0 |
+| go-ledger (Go) — full sweep | all 8 units | 6,656 | 2,201 | **3.0×** | 3.3× | 2026-07-04 | 0.3.0 |
+| ts-cart (TypeScript) — full sweep | all 8 units | 6,400 | 2,087 | **3.1×** | 3.4× | 2026-07-04 | 0.3.0 |
+
+Two different measurements, deliberately: the **DoD gate**
+(`bench/benchmark.py`, enforced in CI, exits nonzero below 5×) measures three
+representative regeneration tasks, one per dependency layer. The **full sweeps**
+(`bench/sweep.py`) regenerate *every* unit once — including the leaf types that
+barely benefit — so a sweep always averages lower than the gate. That is not a
+regression; it is the honest cost of counting everything.
 
 Raw-side counts reproduce exactly; heddle-side totals jitter by ~1 token per
 unit between runs (verify statuses flip `pass` → `cached-pass`), so per-unit
-last decimals move while every ratio above is stable. An independent re-run
-the same day confirmed all ratios, the median (7.93×), and the below-5×
-count.
-
-The two projects answer different challenges. The sales example is heddle's own
-20-contract demo — small, and the repo README concedes its baseline is
-constructed. The enora twin is a real customer-side digital-twin PoC (43
-contracts, 24 source modules, energy-domain logic) that was **not built to
-flatter the tool** — and it scores *higher*, because real projects have deeper
-dependency structure than a demo: the more closure a unit has, the more a
-~300-token packet saves.
+last decimals move while the ratios hold.
 
 ## What one number hides: the distribution
 
-From the twin's full sweep (2026-07-04):
+The ratio tracks dependency depth — the more transitive closure a unit has,
+the more a ~300-token packet replaces:
 
-- **Deep units** (large transitive closures) are where heddle earns its keep:
-  `create_app` ~40× (17,404 → ~430 tokens), `replay_counterfactual` ~26×,
-  `run_scenario` ~22×, `apply_scenario` ~16×, `simulate` ~15×.
-- **Leaf types** barely benefit: `EnergySeries` ~1.9× — no dependency closure
-  means the raw files were already cheap. 13 of 43 units individually fall
-  below 5×.
-- The overall 9.1× is raw-token-weighted, so deep units dominate it — but the
-  per-unit **median is 7.9×**, close enough that the headline is not a
-  weighting artifact.
+- **sales**: `top_customers` 6.2×, `average_sale` 6.1×, `segment_revenue_share`
+  5.8× at the deep end; the `Sale` type itself 1.0× at the leaf end (its raw
+  files were already packet-sized).
+- **go-ledger**: `Balanced` 4.8× down to `Account` 1.2×.
+- **ts-cart**: `totalCents` 5.0× down to `Sku` 1.5×.
 
-## Cache economics (from real stores, not benchmarks)
+The examples are deliberately small (8–20 contracts, 2–3 layers), so their
+sweeps sit in the 3–4× range. Deeper projects score higher, not lower: every
+additional dependency layer widens the gap between reading a closure and
+reading a packet. The DoD gate's 5.4× on three mid-to-deep units shows the
+same effect inside one project.
 
-Verification caching is the other half of the payoff, and both dogfood stores
-carry live, **cumulative** counters — they advance with every use, including
-benchmark sweeps, so these are dated snapshots, not constants:
+## Cache economics (from a real store, not a benchmark)
 
-| store | snapshot (2026-07-04) | verify requests | served from cache | test runs avoided | hit rate |
-|---|---|--:|--:|--:|--:|
-| enora twin | before the day's benchmark sweeps | 135 | 92 | 92 | 68% |
-| enora twin | after three full 43-unit sweeps | 357 | 271 | 271 | 76% |
-| heddle-on-heddle | day one of dogfooding | 43 | 31 | 31 | 72% |
+Verification caching is the other half of the payoff. This repo dogfoods
+heddle (12 contracts over its own stable seams — see `contracts/`), and its
+store counters after day one:
 
-The twin's two rows illustrate the mechanism working as designed: benchmark
-sweeps themselves hit the cache, so repeated verification drives the
-cumulative hit rate up, not down.
+| store | verify requests | served from cache | test runs avoided | hit rate |
+|---|--:|--:|--:|--:|
+| heddle-on-heddle | 43 | 31 | 31 | 72% |
+
+Counters are cumulative and advance with use (`heddle status` shows them);
+reproduce by cloning the repo and verifying the contracts yourself.
 
 One accounting caveat: `status`'s cumulative **token counters populate only via
-the MCP server** (`_respond` in `server.py` counts every tool response); both
-projects have so far been driven through the CLI, so their `tokens` blocks read
-zero. They will accumulate the first time an agent session drives
-`heddle serve` for real.
+the MCP server** (`_respond` in `server.py` counts every tool response); CLI
+use exercises the cache counters but not the token counters.
 
 ## What the numbers claim — and what they don't
 
-The methodology (identical in both projects' `bench/benchmark.py`): **raw
-mode** counts what a file-based agent reads to regenerate one unit — the spec
-and full source file of the unit *and* of every transitive dependency, the
-unit's own tests, and one pytest run's output. **Heddle mode** counts the JSON of three
-tool responses: `get_contract`, `get_dependents(transitive=true)`, `verify`.
+The methodology (`bench/benchmark.py` and `bench/sweep.py`, same accounting):
+**raw mode** counts what a file-based agent reads to regenerate one unit — the
+spec and full source file of the unit *and* of every transitive dependency,
+the unit's own tests, and one full test-suite run's output at the runner's
+defaults (pytest / `go test ./...` / `node --test`). **Heddle mode** counts
+the JSON of three tool responses: `get_contract`,
+`get_dependents(transitive=true)`, `verify`.
 
 Read the numbers with these concessions attached:
 
@@ -91,20 +88,22 @@ Read the numbers with these concessions attached:
 - **The initial build is not measured and costs *more* with heddle** —
   contracts are authored on top of the code and tests. The payoff is at
   maintenance and regeneration time.
-- The twin's pytest output is quiet (`addopts="-q"`, 143 tokens on a green
-  run); a failing raw run would dump tracebacks where heddle serves a
-  ≤40-token summary, so the failure-path advantage is invisible in these
-  numbers.
+- A green suite prints little, so the suite-output component is small in
+  every row above; a failing raw run would dump tracebacks where heddle
+  serves a ≤40-token summary, so the failure-path advantage is invisible in
+  these numbers.
 
 ## Reproduce
 
 ```bash
-# sales example (also the CI DoD gate — exits nonzero below 5x)
-cd heddle && uv run python bench/benchmark.py
+# the DoD gate (CI runs this on every push; exits nonzero below 5x)
+uv run python bench/benchmark.py
 
-# enora twin (private repo)
-cd enora.enora-twin && make bench
+# full sweeps — any heddle project works, including yours
+uv run python bench/sweep.py examples/sales
+uv run python bench/sweep.py examples/go-ledger     # needs a Go toolchain
+uv run python bench/sweep.py examples/ts-cart       # npm install there first; Node >= 22.6
 ```
 
-New scenario runs belong in the table above — record date, heddle version, and
-what drove the run.
+New scenario runs belong in the table above — record the scope, date, and
+heddle version.
