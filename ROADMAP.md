@@ -14,14 +14,20 @@
   `status` (#20); contract provenance (`status: inferred | confirmed`); and
   gate-shaped verify (a hard `ok` bit plus `--radius`, so one call gates a
   change's whole blast radius).
+- **v0.3** (0.3.0 → PyPI, 2026-07-04) — adoption: the
+  [getting-started walkthrough](docs/getting-started.md) for the
+  contract-first agent workflow; sample projects in all three languages
+  (`examples/sales`, `examples/go-ledger`, `examples/ts-cart`); and heddle
+  developing heddle — the repo's own stable seams under contract, reviewed and
+  confirmed. No engine changes.
 
 What follows is where it goes next. The deferred-by-design items live in
 [ISSUES.md](ISSUES.md) and the [issue tracker](https://github.com/davet47/heddle/issues);
 this is the prioritization.
 
-## Theme for v0.3: shared → hosted
+## Theme for v0.4: shared → hosted
 
-v0.2 made the cache shareable; v0.3 makes sharing it safe at team scale. The
+v0.2 made the cache shareable; v0.4 makes sharing it safe at team scale. The
 remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
 
 - **Auth scoping** — split publish from read: CI can write greens, a laptop can
@@ -73,7 +79,7 @@ project avoids "scope creep toward Loom." Keep the surface minimal: 5 MCP tools,
 
 ## Suggested sequencing
 
-1. **Hosted-store hardening** (the v0.3 theme): auth scoping, concurrent
+1. **Hosted-store hardening** (the v0.4 theme): auth scoping, concurrent
    writers, cross-graph invalidation — then the dependency set in the key.
 2. **Fixture coverage** in the test-source hash, and strict provenance mode
    (#49) if demand shows up.

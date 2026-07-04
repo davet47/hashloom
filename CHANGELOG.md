@@ -6,6 +6,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-04
+
+Theme: adoption. Everything a first-time visitor needs that the engine
+releases didn't ship: a getting-started walkthrough for the contract-first
+agent workflow, sample projects in all three supported languages, and the
+strongest possible existence proof — heddle developing heddle, its own stable
+seams under contract (written `inferred` by the agent, since reviewed and
+explicitly confirmed by a human, at zero re-verification cost). No code
+changes: the engine is 0.2.0's; the 5 MCP tools / 5 CLI commands surface and
+all response shapes are unchanged.
+
 ### Added
 - Heddle develops on heddle: the repo is now itself a heddle project —
   `contracts/` holds 12 contracts over the stable seams (the five `api.py`
@@ -122,6 +133,7 @@ stay `heddle`).
 - CI (tests on Python 3.10 through 3.13 plus the >5x benchmark guard) and PyPI
   Trusted Publishing on version tags.
 
-[Unreleased]: https://github.com/davet47/heddle/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/davet47/heddle/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/davet47/heddle/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/davet47/heddle/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/davet47/heddle/releases/tag/v0.1.0
