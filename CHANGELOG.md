@@ -6,7 +6,24 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-05
+
+Theme: discoverability. An official MCP Registry listing, and the CI that
+keeps it from going stale. No engine changes.
+
 ### Added
+- An MCP Registry listing, `io.github.davet47/heddle`: `server.json` at the
+  repo root describes the server, the README carries the `mcp-name`
+  ownership marker (the registry verifies PyPI packages by finding it in
+  the package description), and a `heddle-mcp` console script boots the
+  stdio server directly — the registry's launch convention is
+  `uvx <distribution>`, and uvx runs the script named after the
+  distribution. A launch shim for `heddle serve`, not a sixth CLI command.
+- Registry publishing in CI: an `mcp-registry` job in the release workflow
+  authenticates with GitHub OIDC (no stored secret), syncs the versions in
+  `server.json` from the tag, and publishes to
+  registry.modelcontextprotocol.io after the PyPI publish succeeds — every
+  tagged release updates the listing.
 - A benchmark scorecard, `docs/benchmarks.md`, and a full-sweep benchmark,
   `bench/sweep.py`: the scorecard holds every published token-reduction
   number — the sales DoD gate (5.4×) plus full sweeps of all three example

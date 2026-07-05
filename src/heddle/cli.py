@@ -93,5 +93,15 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
 
+def serve_main(argv: list[str] | None = None) -> int:
+    """`heddle-mcp` console script: `heddle serve` under the name uvx expects.
+
+    MCP clients launch registry-listed PyPI packages as `uvx <distribution>`,
+    and uvx runs the console script named after the distribution (heddle-mcp).
+    A launch shim, not a sixth CLI command.
+    """
+    return main(["serve", *(sys.argv[1:] if argv is None else argv)])
+
+
 if __name__ == "__main__":
     sys.exit(main())

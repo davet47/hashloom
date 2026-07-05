@@ -28,6 +28,7 @@ dependencies = [
 
 [project.scripts]
 heddle = "heddle.cli:main"
+heddle-mcp = "heddle.cli:serve_main"  # uvx launch shim for the MCP Registry (`uvx heddle-mcp` == `heddle serve`)
 
 [project.urls]
 Homepage = "https://github.com/davet47/heddle"
