@@ -203,3 +203,5 @@ Kept deliberately small: 5 MCP tools, 5 CLI commands, contracts as plain YAML. E
 ## License
 
 Apache 2.0
+
+<!-- mcp-name: io.github.davet47/heddle -->
