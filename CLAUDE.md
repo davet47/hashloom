@@ -33,6 +33,11 @@ stable seams (the five `api.py` functions, the `contract.py` hashing trio,
 `impl_hash`, `verification_key`, `HeddleError`, the `Store` Protocol). The
 workflow from [docs/getting-started.md](docs/getting-started.md) applies here:
 
+- **The heddle MCP server is project-configured** in [.mcp.json](.mcp.json)
+  (`uv run heddle serve`). When its tools are present, **prefer `get_contract`
+  packets and `get_dependents` over reading a contracted seam's source file** —
+  the ~300-token packet is the token-frugal path this project exists to prove;
+  fall back to file reads only for uncontracted code.
 - **Before changing a contracted seam**, check the blast radius (the
   `get_dependents` MCP tool when connected — it is not a CLI command);
   **after touching one**, `uv run heddle verify --radius <name>` must return
