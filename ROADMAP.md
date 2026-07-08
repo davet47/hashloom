@@ -49,6 +49,17 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
   function's own AST, not the conftest fixtures and helpers it calls; changing
   only those does not force a re-run yet. The README documents this caveat;
   closing it is the next precision/soundness item.
+- **Facet-aware invalidation**
+  ([#68](https://github.com/davet47/heddle/issues/68)) —
+  `put_contract`'s semantic diff already reports
+  *which* facet of a contract changed (signature / deps / examples /
+  invariants), but invalidation ignores that precision: any hash-relevant
+  change marks every transitive dependent stale. The sharpening is letting a
+  dependent declare — or heddle infer — which facets it actually leans on, so
+  an examples-only change doesn't re-verify a dependent that only consumes the
+  signature. Pure precision work inside the existing model — no new surface
+  (5 MCP tools, 5 CLI commands unchanged). Unscheduled: it queues behind
+  fixture coverage (the #18 follow-up above) and the v0.4 hosted-store theme.
 - **The deterministic-test caveat** — a cached green assumes deterministic
   tests, so a pass that depended on wall-clock time, network, or randomness can
   outlive the condition that made it pass. The README states the caveat
