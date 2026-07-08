@@ -72,9 +72,12 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
 
 ## Bigger bets
 
-- **Further languages** — the adapter seam is proven three deep (Python, Go,
-  TypeScript, chosen by impl extension). Each additional language is real work:
-  a normalised-AST hasher plus a test-runner integration.
+- **Further languages** — the adapter seam is proven four deep (Python, Go,
+  TypeScript, Java, chosen by impl extension) and is itself under contract
+  (`contracts/LanguageAdapter.yaml`, the adapter specification: six methods,
+  extension routing, hashing and error-shape invariants). Each additional
+  language is real work — a normalised-AST hasher plus a test-runner
+  integration — but now lands against a spec, not a convention.
 - **Tessl spec-format compatibility** — an import/export adapter, once that
   format is stable.
 

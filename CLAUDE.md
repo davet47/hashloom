@@ -90,7 +90,10 @@ installed into it. `heddle status` reports the resolved interpreter.
 Non-Python impls resolve their own toolchain by the same precedence, keyed by the
 impl extension: a `.go` impl uses `go` (`.heddle/config.json` → `"go"`); a
 `.ts`/`.tsx` impl uses `node` (→ `"node"`) plus the project's *own* `typescript`,
-and auto-detects the test runner (vitest / jest, else Node's `node:test`).
+and auto-detects the test runner (vitest / jest, else Node's `node:test`); a
+`.java` impl uses `java` (→ `"java"`, JDK >= 11) and auto-detects the runner from
+the build manifest (`pom.xml` → Maven, `build.gradle` → Gradle, committed
+`mvnw`/`gradlew` wrappers preferred).
 
 ## How to run
 
@@ -104,4 +107,5 @@ hash-stability rules are enforced, not just documented. Keep it green.
 
 Python >=3.10. Deps: mcp, pyyaml, tiktoken, pytest. TypeScript contracts also
 need Node >=22.6 and the project's own `typescript` (CI installs a repo-local one
-via `npm ci`; `node_modules/` is gitignored).
+via `npm ci`; `node_modules/` is gitignored). Java contracts need a JDK >=11 plus
+Maven or Gradle (CI installs Temurin; Maven ships on the runner).

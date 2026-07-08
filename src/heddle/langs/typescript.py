@@ -119,7 +119,7 @@ class TypeScriptAdapter:
             if path_str and test:
                 try:
                     h = self._hash_def(root, path_str, test)
-                except HeddleError:
+                except (HeddleError, OSError, ValueError, subprocess.SubprocessError):
                     h = None
             parts.append(f"{nid}={h or 'id'}")
         return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()

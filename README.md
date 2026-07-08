@@ -106,7 +106,7 @@ A contract an agent reverse-engineers from existing code can declare that it has
 
 - **Contract hash**: sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, example order preserved, dep order ignored. `impl`, `tests`, `invariants`, and `status` are excluded, so **relocating files never invalidates**, rewording an invariant is free, and confirming an inferred contract never invalidates anything. Invariants are documentation, not a machine obligation; the real check is the tests, whose source is in the verification key.
 - **Impl hash**: sha256 over the normalised AST of the implementation, so reformatting and comment edits never bust the cache. Docstrings are stripped too.
-- **Verification key**: `(contract hash, impl hash, test-source hash, toolchain identity, transitive dep contract hashes)`. Heddle caches verification results, keyed so that a change to any contract in the closure, to the implementation, to a test's own source, or to the toolchain version forces a re-run. The toolchain component (`python 3.11.7`, `go 1.21.5`, `node <v> ts <v>`) is what makes a shared or cross-machine green sound: a 3.11 pass is never served to 3.13. Failures are never served from cache. Two caveats. A cached pass assumes deterministic tests, so a green result that depended on wall-clock time, network, or randomness can outlive the condition that made it pass. And the test-source hash covers each test function's own normalised AST, not the conftest fixtures or helpers it calls, so changing only those will not force a re-run yet (see [Roadmap](ROADMAP.md)).
+- **Verification key**: `(contract hash, impl hash, test-source hash, toolchain identity, transitive dep contract hashes)`. Heddle caches verification results, keyed so that a change to any contract in the closure, to the implementation, to a test's own source, or to the toolchain version forces a re-run. The toolchain component (`python 3.11.7`, `go 1.21.5`, `node <v> ts <v>`, `java 21.0.3`) is what makes a shared or cross-machine green sound: a 3.11 pass is never served to 3.13. Failures are never served from cache. Two caveats. A cached pass assumes deterministic tests, so a green result that depended on wall-clock time, network, or randomness can outlive the condition that made it pass. And the test-source hash covers each test function's own normalised AST, not the conftest fixtures or helpers it calls, so changing only those will not force a re-run yet (see [Roadmap](ROADMAP.md)).
 
 ## MCP tools (the entire surface)
 
@@ -147,6 +147,11 @@ semantics hold per language:
   *own* `typescript` compiler API, auto-detects the test runner from
   `package.json` (vitest / jest, else Node's built-in `node:test`). Needs Node
   >= 22.6; config key `{"node": "..."}`.
+- **Java** (`.java`): hashes via a single-file `javac`-tree helper (JDK-only, no
+  dependencies), auto-detects the test runner from the build manifest —
+  `pom.xml` routes to Maven, `build.gradle`/`build.gradle.kts` to Gradle, and a
+  committed `mvnw`/`gradlew` wrapper is preferred over the PATH binary. Needs a
+  JDK >= 11 plus Maven or Gradle; config key `{"java": "..."}`.
 
 Python stays the default; a project can mix languages freely.
 

@@ -1,0 +1,9 @@
+// Passed via --init-script on every heddle-driven Gradle run: subprojects
+// where the --tests filter matches nothing stay green instead of failing with
+// "No tests found for given includes", so a multi-project build behaves like
+// `go test -run` over packages — only the targeted tests decide the verdict.
+allprojects {
+    tasks.withType(Test).configureEach {
+        filter.failOnNoMatchingTests = false
+    }
+}

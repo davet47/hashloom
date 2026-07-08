@@ -92,7 +92,9 @@ def test_source_hash(root: Path, node_ids: list[str]) -> str:
         if qualname:
             try:
                 h = _hash_def(root, path_str, qualname)
-            except HeddleError:
+            # OSError/ValueError cover unreadable and non-UTF-8 files — the
+            # degrade-to-id promise holds even for sources we cannot decode
+            except (HeddleError, OSError, ValueError):
                 h = None
         parts.append(f"{nid}={h or 'id'}")
     return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()

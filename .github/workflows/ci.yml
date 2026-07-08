@@ -31,6 +31,10 @@ jobs:
       - uses: actions/setup-node@v4    # for the TypeScript adapter tests (else they skip)
         with:
           node-version: '22'           # >= 22.6 for .ts type-stripping in node:test
+      - uses: actions/setup-java@v4    # for the Java adapter tests (else they skip; mvn ships on the runner)
+        with:
+          distribution: 'temurin'
+          java-version: '21'
       - name: Install the TypeScript toolchain
         run: npm ci                    # provides the `typescript` the tshash helper resolves
       - name: Sync deps

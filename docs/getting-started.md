@@ -23,7 +23,7 @@ Start agent sessions from inside the project: the server resolves the project
 by walking up from its working directory to the nearest `.heddle/`. If
 `heddle status` shows the wrong interpreter for your tests, set it explicitly
 (`.heddle/config.json` → `{"python": "..."}`); non-Python toolchains resolve
-the same way per impl extension (`"go"`, `"node"`).
+the same way per impl extension (`"go"`, `"node"`, `"java"`).
 
 ## 2. Give the agent the working rules
 

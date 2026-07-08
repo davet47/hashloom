@@ -6,6 +6,21 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **Java adapter** — a `.java` impl routes to Java: hashing via a single-file
+  `javac`-tree helper (`langs/javahash/JavaHash.java`, JDK-only, zero
+  dependencies) so formatting, comments, and javadoc never bust the cache;
+  tests via the project's own Maven or Gradle, auto-detected from the build
+  manifest (`pom.xml` → `mvn`, `build.gradle` → `gradle`, committed
+  `mvnw`/`gradlew` wrappers preferred); toolchain from `.heddle/config.json`
+  (`{"java": "..."}`), else `java` on PATH. Needs a JDK >= 11. The contract
+  syntax and the 5-tool / 5-CLI surface are unchanged.
+- **The adapter seam under contract** — `contracts/LanguageAdapter.yaml`
+  (status: inferred, pending review) covers the six-method per-language
+  Protocol and `adapter_for` routing, with toolchain-free seam tests in
+  `tests/test_langs_seam.py`. Heddle-on-heddle: the seam that gained a fourth
+  implementation is now itself a contracted unit.
+
 ## [0.3.1] - 2026-07-05
 
 Theme: discoverability. An official MCP Registry listing, and the CI that
