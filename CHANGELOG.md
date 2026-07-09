@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-07-09
+
+The tombstone release: **the project has been renamed to `hashloom`** (the
+loom-part namespace turned out to be crowded — two unrelated "heddle" MCP
+servers already exist). This is the final release as `heddle-mcp`; the engine
+continues unchanged as [`hashloom`](https://pypi.org/project/hashloom/) from
+0.4.0 on. No code changes.
+
 ## [0.3.2] - 2026-07-09
 
 Theme: Java, end to end — a fourth language adapter, its reference example,

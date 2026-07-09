@@ -1,5 +1,12 @@
 # heddle
 
+> [!IMPORTANT]
+> **This project has been renamed to [hashloom](https://github.com/davet47/hashloom).**
+> `heddle-mcp` 0.3.3 is the final release under this name — from 0.4.0 on, install
+> [`hashloom`](https://pypi.org/project/hashloom/) instead. Same engine, same
+> contracts, same warp and weft; the name changed because the loom-part namespace
+> got crowded.
+
 [![CI](https://github.com/davet47/heddle/actions/workflows/ci.yml/badge.svg)](https://github.com/davet47/heddle/actions/workflows/ci.yml)
 
 ![heddle regenerating a unit: one ~300-token context packet plus a cached verification, instead of re-reading whole files](https://raw.githubusercontent.com/davet47/heddle/main/docs/demo.gif)

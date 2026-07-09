@@ -1,7 +1,7 @@
 [project]
 name = "heddle-mcp"  # PyPI distribution name; import name and CLI stay `heddle`
 dynamic = ["version"]  # single-sourced from src/heddle/__init__.py
-description = "Content-addressed contracts with a hash-keyed verification cache for spec-driven agent loops, over MCP."
+description = "RENAMED: this project continues as 'hashloom' on PyPI. Final release under this name. Content-addressed contracts with a hash-keyed verification cache for spec-driven agent loops, over MCP."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
