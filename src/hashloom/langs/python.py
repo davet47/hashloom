@@ -1,4 +1,4 @@
-"""The Python adapter: ast-based hashing and the pytest runner (heddle's
+"""The Python adapter: ast-based hashing and the pytest runner (hashloom's
 original behaviour, now behind the LanguageAdapter interface)."""
 
 from __future__ import annotations
@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .. import implhash, verify
 from ..config import resolve_python
-from ..errors import HeddleError
+from ..errors import HashloomError
 
 
 class PythonAdapter:
@@ -32,7 +32,7 @@ class PythonAdapter:
         return resolve_python(root, override=override)
 
     def toolchain_identity(self, root: Path, override: str | None = None) -> str:
-        # the resolved interpreter may differ from the one running heddle, so ask
+        # the resolved interpreter may differ from the one running hashloom, so ask
         # it directly; version-only (no platform) keeps cross-OS greens shareable
         key = (str(root), override)
         if key in self._id_cache:
@@ -44,7 +44,7 @@ class PythonAdapter:
                 capture_output=True, text=True, check=True, timeout=30,
             )
         except (OSError, subprocess.SubprocessError):
-            raise HeddleError("bad_toolchain", f"could not read the Python version from '{python}'")
+            raise HashloomError("bad_toolchain", f"could not read the Python version from '{python}'")
         ident = f"python {proc.stdout.strip()}"
         self._id_cache[key] = ident
         return ident

@@ -15,7 +15,7 @@ import re
 
 import yaml
 
-from .errors import HeddleError
+from .errors import HashloomError
 
 REQUIRED_KEYS = ("name", "signature")
 OPTIONAL_KEYS = ("deps", "invariants", "examples", "tests", "impl", "status")
@@ -38,11 +38,11 @@ def validate_name(name: str) -> None:
     subdirectories (`billing/invoice`). Keep it a safe relative path so a name can
     never escape `contracts/`: no absolute paths, no `..`, no backslashes."""
     if "\\" in name:
-        raise HeddleError("invalid_name", f"contract name '{name}' must use '/' for namespaces, not backslash", contract=name)
+        raise HashloomError("invalid_name", f"contract name '{name}' must use '/' for namespaces, not backslash", contract=name)
     if name.startswith("/"):
-        raise HeddleError("invalid_name", f"contract name '{name}' must be relative, not absolute", contract=name)
+        raise HashloomError("invalid_name", f"contract name '{name}' must be relative, not absolute", contract=name)
     if any(part in ("", ".", "..") for part in name.split("/")):
-        raise HeddleError("invalid_name", f"contract name '{name}' has an empty or '.'/'..' path segment", contract=name)
+        raise HashloomError("invalid_name", f"contract name '{name}' has an empty or '.'/'..' path segment", contract=name)
 
 
 def parse_contract(text: str, expect_name: str | None = None) -> dict:
@@ -50,18 +50,18 @@ def parse_contract(text: str, expect_name: str | None = None) -> dict:
     try:
         data = yaml.safe_load(text)
     except yaml.YAMLError as e:
-        raise HeddleError("invalid_yaml", f"contract is not valid YAML: {e}", contract=expect_name)
+        raise HashloomError("invalid_yaml", f"contract is not valid YAML: {e}", contract=expect_name)
 
     if not isinstance(data, dict):
-        raise HeddleError("invalid_shape", "contract must be a YAML mapping", contract=expect_name)
+        raise HashloomError("invalid_shape", "contract must be a YAML mapping", contract=expect_name)
 
     name = data.get("name")
     if not isinstance(name, str) or not name.strip():
-        raise HeddleError("invalid_shape", "contract must have a non-empty string 'name'", contract=expect_name)
+        raise HashloomError("invalid_shape", "contract must have a non-empty string 'name'", contract=expect_name)
     name = name.strip()
     validate_name(name)
     if expect_name is not None and name != expect_name:
-        raise HeddleError(
+        raise HashloomError(
             "name_mismatch",
             f"contract 'name: {name}' does not match expected '{expect_name}'",
             contract=expect_name,
@@ -69,36 +69,36 @@ def parse_contract(text: str, expect_name: str | None = None) -> dict:
 
     unknown = set(data) - ALLOWED_KEYS
     if unknown:
-        raise HeddleError(
+        raise HashloomError(
             "invalid_shape",
             f"unknown keys: {sorted(unknown)} — allowed: {sorted(ALLOWED_KEYS)}",
             contract=name,
         )
     for key in REQUIRED_KEYS:
         if not isinstance(data.get(key), str) or not data[key].strip():
-            raise HeddleError("invalid_shape", f"'{key}' is required and must be a non-empty string", contract=name)
+            raise HashloomError("invalid_shape", f"'{key}' is required and must be a non-empty string", contract=name)
 
     for key in ("deps", "invariants", "tests"):
         if key in data:
             if not isinstance(data[key], list) or not all(isinstance(x, str) and x.strip() for x in data[key]):
-                raise HeddleError("invalid_shape", f"'{key}' must be a list of non-empty strings", contract=name)
+                raise HashloomError("invalid_shape", f"'{key}' must be a list of non-empty strings", contract=name)
 
     if "examples" in data:
         if not isinstance(data["examples"], list):
-            raise HeddleError("invalid_shape", "'examples' must be a list of {in, out} mappings", contract=name)
+            raise HashloomError("invalid_shape", "'examples' must be a list of {in, out} mappings", contract=name)
         for ex in data["examples"]:
             if not isinstance(ex, dict) or set(ex) != {"in", "out"}:
-                raise HeddleError("invalid_shape", "each example must be a mapping with exactly 'in' and 'out'", contract=name)
+                raise HashloomError("invalid_shape", "each example must be a mapping with exactly 'in' and 'out'", contract=name)
 
     if "impl" in data:
         impl = data["impl"]
         if not isinstance(impl, str) or "::" not in impl:
-            raise HeddleError("invalid_shape", "'impl' must be 'path/to/file.py::function_name'", contract=name)
+            raise HashloomError("invalid_shape", "'impl' must be 'path/to/file.py::function_name'", contract=name)
 
     if "status" in data:
         # tuple membership also rejects YAML-coerced non-strings (status: true)
         if data["status"] not in ("inferred", "confirmed"):
-            raise HeddleError("invalid_shape", "'status' must be 'inferred' or 'confirmed'", contract=name)
+            raise HashloomError("invalid_shape", "'status' must be 'inferred' or 'confirmed'", contract=name)
 
     return data
 

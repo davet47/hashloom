@@ -1,9 +1,9 @@
-name: HeddleError
-signature: "class HeddleError(Exception): (code: str, message: str, contract: str | None = None); to_dict() -> dict"
+name: HashloomError
+signature: "class HashloomError(Exception): (code: str, message: str, contract: str | None = None); to_dict() -> dict"
 invariants:
   - every error an agent sees is one of these — nothing leaks a stack trace over MCP
   - 'to_dict renders {"error": {code, message, contract?}} — the contract key only when set'
   - codes are short snake_case machine keys; messages are one human line
 tests: [tests/test_mcp_e2e.py::test_errors_are_structured_over_stdio]
-impl: src/heddle/errors.py::HeddleError
+impl: src/hashloom/errors.py::HashloomError
 status: confirmed

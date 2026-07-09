@@ -1,6 +1,6 @@
 # Getting started: building a package contract-first with an agent
 
-The README explains what heddle is. This is the other half: how a human and a
+The README explains what hashloom is. This is the other half: how a human and a
 coding agent actually work with it, day to day. The short version — the human
 owns the contracts, the agent owns the code, and `verify --radius` decides when
 anything is done.
@@ -8,21 +8,21 @@ anything is done.
 ## 1. Set up a project
 
 ```bash
-pip install heddle-mcp          # or: uvx --from heddle-mcp heddle ...
+pip install hashloom          # or: uvx --from hashloom hashloom ...
 mkdir mypackage && cd mypackage
-heddle init                     # creates .heddle/ and contracts/
+hashloom init                     # creates .hashloom/ and contracts/
 ```
 
 Point your agent at it. For Claude Code:
 
 ```bash
-claude mcp add heddle -- heddle serve
+claude mcp add hashloom -- hashloom serve
 ```
 
 Start agent sessions from inside the project: the server resolves the project
-by walking up from its working directory to the nearest `.heddle/`. If
-`heddle status` shows the wrong interpreter for your tests, set it explicitly
-(`.heddle/config.json` → `{"python": "..."}`); non-Python toolchains resolve
+by walking up from its working directory to the nearest `.hashloom/`. If
+`hashloom status` shows the wrong interpreter for your tests, set it explicitly
+(`.hashloom/config.json` → `{"python": "..."}`); non-Python toolchains resolve
 the same way per impl extension (`"go"`, `"node"`, `"java"`).
 
 ## 2. Give the agent the working rules
@@ -34,7 +34,7 @@ copy it, but read the loop below so you know what you're enforcing:
 ```markdown
 # Working rules
 
-This package is built heddle-first. Contracts are warp; code is weft.
+This package is built hashloom-first. Contracts are warp; code is weft.
 
 - Design each unit as a contract BEFORE implementing it: `put_contract` with
   signature, invariants, examples, deps, tests, impl — and `status: inferred`
@@ -51,7 +51,7 @@ This package is built heddle-first. Contracts are warp; code is weft.
 
 ## 3. The loop, once through
 
-Say you ask for a rate limiter. A heddle-first agent works it like this:
+Say you ask for a rate limiter. A hashloom-first agent works it like this:
 
 **Contracts first.** The agent designs the seams and puts each one — marking
 what it invented, not you, as `inferred`:
@@ -70,10 +70,10 @@ impl: src/limiter.py::allow
 status: inferred
 ```
 
-The `put_contract` response echoes `"inferred": true` — heddle has recorded
+The `put_contract` response echoes `"inferred": true` — hashloom has recorded
 that this spec is the agent's guess at your intent, not your word.
 
-**You review the seams, not the code.** `heddle status` lists every `inferred`
+**You review the seams, not the code.** `hashloom status` lists every `inferred`
 contract — that list is your review queue. Review a contract the way you review
 an interface: is the signature right, are the invariants what you meant? Fix
 what's wrong; for what's right, delete the `status: inferred` line (or set
@@ -93,7 +93,7 @@ The code is weft: regenerated freely, never precious.
 **The gate decides done.** After any change:
 
 ```bash
-heddle verify --radius allow      # or the MCP verify with radius=true
+hashloom verify --radius allow      # or the MCP verify with radius=true
 ```
 
 One call verifies the unit plus everything it invalidates, serves cached greens
@@ -108,7 +108,7 @@ confirmed contract — a signature, an example — the `put_contract` response
 names every dependent it invalidated, and the radius gate re-proves exactly
 those. Nothing else re-runs.
 
-## 4. Where heddle earns its keep — and where it doesn't
+## 4. Where hashloom earns its keep — and where it doesn't
 
 Contracts belong on stable seams: interfaces other units depend on that you
 expect to outlive their current implementation. A package with ten-plus units
@@ -124,8 +124,8 @@ a contract where it earns no place is correct use, not a failure.
   [`examples/ts-cart`](../examples/ts-cart) (TypeScript), and
   [`examples/java-payroll`](../examples/java-payroll) (Java): the same loop in
   each language, one adapter per impl extension.
-- **Team scale** — point `.heddle/config.json` at a shared cache
-  (`{"shared": {"url", "token"}}`, backend: `python -m heddle.cache_server`)
+- **Team scale** — point `.hashloom/config.json` at a shared cache
+  (`{"shared": {"url", "token"}}`, backend: `python -m hashloom.cache_server`)
   and one teammate's or CI's green serves everyone, keyed by toolchain so a
   3.11 pass never serves 3.13.
 - **The spec** — [README](../README.md) for the full tool surface and the

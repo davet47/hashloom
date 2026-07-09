@@ -1,6 +1,6 @@
 name: status
 signature: "(root: Path, store: Store) -> dict"
-deps: [Store, verification_key, impl_hash, HeddleError]
+deps: [Store, verification_key, impl_hash, HashloomError]
 invariants:
   - dirty means no current green — missing, stale, failed, or unresolvable toolchain all count
   - spec-only contracts are never dirty; they have nothing to verify
@@ -10,5 +10,5 @@ tests:
   - tests/test_verify.py::test_status_reports_dirty_and_hit_rate
   - tests/test_verify.py::test_status_reports_wasted_rechecks
   - tests/test_store_and_api.py::test_status_lists_inferred_including_spec_only
-impl: src/heddle/api.py::status
+impl: src/hashloom/api.py::status
 status: confirmed

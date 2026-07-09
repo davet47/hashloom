@@ -1,4 +1,4 @@
-"""CLI: heddle init · heddle index · heddle serve · heddle status · heddle verify."""
+"""CLI: hashloom init · hashloom index · hashloom serve · hashloom status · hashloom verify."""
 
 from __future__ import annotations
 
@@ -8,14 +8,14 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .errors import HeddleError
+from .errors import HashloomError
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="heddle", description="Content-addressed contracts + cached verification over MCP.")
+    parser = argparse.ArgumentParser(prog="hashloom", description="Content-addressed contracts + cached verification over MCP.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("init", help="create .heddle/ and contracts/ in the current directory")
+    sub.add_parser("init", help="create .hashloom/ and contracts/ in the current directory")
     sub.add_parser("index", help="rebuild the store from contracts/")
     serve_parser = sub.add_parser("serve", help="run the MCP server on stdio")
     serve_parser.add_argument(
@@ -88,17 +88,18 @@ def main(argv: list[str] | None = None) -> int:
             if not result["ok"]:
                 return 1
         return 0
-    except HeddleError as e:
+    except HashloomError as e:
         print(json.dumps(e.to_dict(), indent=2), file=sys.stderr)
         return 1
 
 
 def serve_main(argv: list[str] | None = None) -> int:
-    """`heddle-mcp` console script: `heddle serve` under the name uvx expects.
+    """`hashloom-mcp` console script: `hashloom serve` as a single entry point.
 
-    MCP clients launch registry-listed PyPI packages as `uvx <distribution>`,
-    and uvx runs the console script named after the distribution (heddle-mcp).
-    A launch shim, not a sixth CLI command.
+    The Docker image's ENTRYPOINT and a direct uvx target. Registry-listed
+    launches use `uvx hashloom serve` via server.json's packageArguments, since
+    the bare `hashloom` script is the CLI. A launch shim, not a sixth CLI
+    command.
     """
     return main(["serve", *(sys.argv[1:] if argv is None else argv)])
 

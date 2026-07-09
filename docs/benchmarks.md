@@ -1,17 +1,17 @@
 # Benchmarks — the scorecard
 
-Every token-reduction number heddle publishes, in one place: what was measured,
-on what project, when, under which heddle version. **Every row is reproducible
+Every token-reduction number hashloom publishes, in one place: what was measured,
+on what project, when, under which hashloom version. **Every row is reproducible
 from this repo** — the projects are in `examples/`, the scripts in `bench/`.
 
 All ratios are deterministic token counts — both sides of every comparison are
 counted with the same tiktoken encoder (`cl100k`). They do not depend on which
 AI model (or human) drives the session, only on the project's shape and the
-heddle version.
+hashloom version.
 
 ## Headline numbers
 
-| scenario | scope | raw tokens | heddle tokens | ratio | median/unit | date | heddle |
+| scenario | scope | raw tokens | hashloom tokens | ratio | median/unit | date | hashloom |
 |---|---|--:|--:|--:|--:|---|---|
 | sales (Python) — the DoD gate | 3 regeneration tasks over 20 contracts | 6,004 | 1,117 | **5.4×** | — | 2026-07-04 | 0.3.0 |
 | sales (Python) — full sweep | all 19 verifiable units | 31,495 | 7,618 | **4.1×** | 4.8× | 2026-07-04 | 0.3.0 |
@@ -26,7 +26,7 @@ representative regeneration tasks, one per dependency layer. The **full sweeps**
 barely benefit — so a sweep always averages lower than the gate. That is not a
 regression; it is the honest cost of counting everything.
 
-Raw-side counts reproduce exactly; heddle-side totals jitter by ~1 token per
+Raw-side counts reproduce exactly; hashloom-side totals jitter by ~1 token per
 unit between runs (verify statuses flip `pass` → `cached-pass`), so per-unit
 last decimals move while the ratios hold.
 
@@ -53,14 +53,14 @@ same effect inside one project.
 ## Cache economics (from a real store, not a benchmark)
 
 Verification caching is the other half of the payoff. This repo dogfoods
-heddle (12 contracts over its own stable seams — see `contracts/`), and its
+hashloom (12 contracts over its own stable seams — see `contracts/`), and its
 store counters after day one:
 
 | store | verify requests | served from cache | test runs avoided | hit rate |
 |---|--:|--:|--:|--:|
-| heddle-on-heddle | 43 | 31 | 31 | 72% |
+| hashloom-on-hashloom | 43 | 31 | 31 | 72% |
 
-Counters are cumulative and advance with use (`heddle status` shows them);
+Counters are cumulative and advance with use (`hashloom status` shows them);
 reproduce by cloning the repo and verifying the contracts yourself.
 
 One accounting caveat: `status`'s cumulative **token counters populate only via
@@ -77,7 +77,7 @@ defaults (pytest / `go test ./...` / `node --test`) — except Java, where the
 runner is `mvn --batch-mode -q test`: Maven's default INFO logging would
 inflate the raw baseline, so the Java row runs quiet and a green suite
 contributes *zero* suite-output tokens (see the distribution note above).
-**Heddle mode** counts
+**Hashloom mode** counts
 the JSON of three tool responses: `get_contract`,
 `get_dependents(transitive=true)`, `verify`.
 
@@ -86,18 +86,18 @@ Read the numbers with these concessions attached:
 - **The baseline is granted free, perfect knowledge of the dependency
   closure** — no grep, no wrong-file reads, no discovery cost. That is
   deliberately generous to the baseline, since computing the closure is
-  precisely what heddle does; a real file-based agent pays discovery on top.
-- **The heddle side assumes first-try-green regeneration** from the packet
+  precisely what hashloom does; a real file-based agent pays discovery on top.
+- **The hashloom side assumes first-try-green regeneration** from the packet
   alone — no failure/iteration loop, no re-reading tests — and MCP session
   overhead (tool schemas, call inputs) is uncounted.
 - **It is a per-change maintenance estimate, not a session total.** Repeated
   edits in one session amortize raw file reads; conversely, every fresh
   session pays them again.
-- **The initial build is not measured and costs *more* with heddle** —
+- **The initial build is not measured and costs *more* with hashloom** —
   contracts are authored on top of the code and tests. The payoff is at
   maintenance and regeneration time.
 - A green suite prints little, so the suite-output component is small in
-  every row above; a failing raw run would dump tracebacks where heddle
+  every row above; a failing raw run would dump tracebacks where hashloom
   serves a ≤40-token summary, so the failure-path advantage is invisible in
   these numbers.
 
@@ -107,7 +107,7 @@ Read the numbers with these concessions attached:
 # the DoD gate (CI runs this on every push; exits nonzero below 5x)
 uv run python bench/benchmark.py
 
-# full sweeps — any heddle project works, including yours
+# full sweeps — any hashloom project works, including yours
 uv run python bench/sweep.py examples/sales
 uv run python bench/sweep.py examples/go-ledger     # needs a Go toolchain
 uv run python bench/sweep.py examples/ts-cart       # npm install there first; Node >= 22.6
@@ -115,4 +115,4 @@ uv run python bench/sweep.py examples/java-payroll  # needs a JDK >= 17 and Mave
 ```
 
 New scenario runs belong in the table above — record the scope, date, and
-heddle version.
+hashloom version.

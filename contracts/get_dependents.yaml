@@ -1,6 +1,6 @@
 name: get_dependents
 signature: "(root: Path, store: Store, name: str, transitive: bool = False) -> dict"
-deps: [Store, HeddleError]
+deps: [Store, HashloomError]
 invariants:
   - the blast-radius query — who is invalidated if this contract changes, by mechanism not convention
   - direct by default; transitive walks the full closure
@@ -8,5 +8,5 @@ invariants:
 tests:
   - tests/test_store_and_api.py::test_get_dependents
   - tests/test_store_and_api.py::test_get_dependents_flags_inferred
-impl: src/heddle/api.py::get_dependents
+impl: src/hashloom/api.py::get_dependents
 status: confirmed

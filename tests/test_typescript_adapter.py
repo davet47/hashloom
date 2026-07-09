@@ -3,7 +3,7 @@
 (here Node's built-in node:test) via the verify flow.
 
 `typescript` is resolved from the project's own node_modules, so the fixture
-symlinks heddle's dev typescript into each tmp project. The suite skips cleanly
+symlinks hashloom's dev typescript into each tmp project. The suite skips cleanly
 when node or that typescript is unavailable (mirrors the Go suite skipping
 without `go`)."""
 
@@ -15,12 +15,12 @@ from pathlib import Path
 
 import pytest
 
-from heddle import api
-from heddle.errors import HeddleError
-from heddle.indexer import index
-from heddle.langs import adapter_for
-from heddle.project import db_path, init_project
-from heddle.store import SqliteStore
+from hashloom import api
+from hashloom.errors import HashloomError
+from hashloom.indexer import index
+from hashloom.langs import adapter_for
+from hashloom.project import db_path, init_project
+from hashloom.store import SqliteStore
 
 _REPO = Path(__file__).resolve().parents[1]
 _TS_PKG = _REPO / "node_modules" / "typescript"
@@ -42,7 +42,7 @@ _GOOD = (
 def _ts_project(root: Path) -> None:
     init_project(root)
     (root / "package.json").write_text('{\n  "type": "module"\n}\n')
-    # typescript is resolved from the project; symlink heddle's dev copy in
+    # typescript is resolved from the project; symlink hashloom's dev copy in
     (root / "node_modules").mkdir(exist_ok=True)
     (root / "node_modules" / "typescript").symlink_to(_TS_PKG)
     (root / "calc").mkdir()
@@ -125,7 +125,7 @@ def test_ts_tests_fail_to_run_is_a_runner_error(tmp_path):
 def test_ts_impl_syntax_error(tmp_path):
     _ts_project(tmp_path)
     (tmp_path / "calc" / "calc.ts").write_text("export function Total( {\n")
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         adapter_for(_IMPL).impl_hash(tmp_path, _IMPL)
     assert e.value.code == "impl_syntax_error"
 
@@ -133,7 +133,7 @@ def test_ts_impl_syntax_error(tmp_path):
 def test_ts_runner_autodetect(tmp_path):
     """The runner is auto-detected from package.json: vitest/jest if declared,
     else Node's built-in node:test."""
-    from heddle.langs.typescript import TypeScriptAdapter
+    from hashloom.langs.typescript import TypeScriptAdapter
 
     a = TypeScriptAdapter()
     pkg = tmp_path / "package.json"

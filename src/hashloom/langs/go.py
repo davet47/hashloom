@@ -1,6 +1,6 @@
 """The Go adapter: a stdlib `go/ast` hash helper plus the `go test -json` runner.
 
-Both seams come from Go's standard library, so heddle writes no hand-rolled
+Both seams come from Go's standard library, so hashloom writes no hand-rolled
 hash code. The AST-hash helper lives in `gohash/` and is driven with `go run`.
 """
 
@@ -16,7 +16,7 @@ from pathlib import Path
 
 from .. import tokens
 from ..config import load_config
-from ..errors import HeddleError
+from ..errors import HashloomError
 from . import SUMMARY_MAX_TOKENS
 
 _GOHASH_DIR = Path(__file__).parent / "gohash"
@@ -44,14 +44,14 @@ class GoAdapter:
             return self._go_cache[key]
         cand = override or load_config(root).get("go") or shutil.which("go")
         if not cand:
-            raise HeddleError(
+            raise HashloomError(
                 "bad_toolchain",
-                "no Go toolchain found (install go, or set 'go' in .heddle/config.json)",
+                "no Go toolchain found (install go, or set 'go' in .hashloom/config.json)",
             )
         try:
             subprocess.run([cand, "version"], capture_output=True, check=True, timeout=30)
         except (OSError, subprocess.SubprocessError):
-            raise HeddleError("bad_toolchain", f"'{cand}' is not a working Go toolchain")
+            raise HashloomError("bad_toolchain", f"'{cand}' is not a working Go toolchain")
         self._go_cache[key] = cand
         return cand
 
@@ -66,7 +66,7 @@ class GoAdapter:
                 env={**os.environ, "GOTOOLCHAIN": "local"},
             )
         except (OSError, subprocess.SubprocessError):
-            raise HeddleError("bad_toolchain", f"could not read the Go version from '{go}'")
+            raise HashloomError("bad_toolchain", f"could not read the Go version from '{go}'")
         m = _GO_VERSION.search(proc.stdout)
         # version only (drop the trailing GOOS/GOARCH) so cross-OS greens share
         ident = f"go {m.group(1)}" if m else f"go {_oneline(proc.stdout)}"
@@ -90,11 +90,11 @@ class GoAdapter:
         if kind == "hash":
             return rest
         if kind == "not_found":
-            raise HeddleError("impl_not_found", rest, contract=contract)
+            raise HashloomError("impl_not_found", rest, contract=contract)
         if kind == "syntax":
-            raise HeddleError("impl_syntax_error", rest, contract=contract)
+            raise HashloomError("impl_syntax_error", rest, contract=contract)
         # the helper itself could not run (go missing, helper build error, ...)
-        raise HeddleError(
+        raise HashloomError(
             "tests_failed_to_run",
             tokens.truncate("go ast helper failed: " + _oneline(proc.stderr or proc.stdout), 60),
         )
@@ -107,7 +107,7 @@ class GoAdapter:
             if path_str and test:
                 try:
                     h = self._hash_def(root, path_str, test)
-                except (HeddleError, OSError, ValueError, subprocess.SubprocessError):
+                except (HashloomError, OSError, ValueError, subprocess.SubprocessError):
                     h = None
             parts.append(f"{nid}={h or 'id'}")
         return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
@@ -153,7 +153,7 @@ class GoAdapter:
             test_fails = [e for e in events if e.get("Action") == "fail" and e.get("Test")]
             # non-zero exit with no per-test failure means a build/run error, not a fail
             if proc.returncode != 0 and not test_fails:
-                raise HeddleError(
+                raise HashloomError(
                     "tests_failed_to_run",
                     tokens.truncate("go test could not run: " + _oneline(proc.stdout + " " + proc.stderr), 60),
                 )

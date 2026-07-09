@@ -8,12 +8,12 @@ framework dependencies — JUnit 5 via Maven is the entire toolchain. The
 a single-file `javac`-tree helper, verification through this project's own
 build (`pom.xml` → Maven; a Gradle project auto-detects the same way).
 
-Commands assume `heddle` is on PATH (`pip install heddle-mcp`). Working from
-this repo's checkout instead, prefix every `heddle` command with `uv run`.
+Commands assume `hashloom` is on PATH (`pip install hashloom`). Working from
+this repo's checkout instead, prefix every `hashloom` command with `uv run`.
 
 ## Prerequisites
 
-- a JDK >= 17 (`java` on PATH, or `.heddle/config.json` → `{"java": "..."}`;
+- a JDK >= 17 (`java` on PATH, or `.hashloom/config.json` → `{"java": "..."}`;
   the adapter itself needs only >= 11 — 17 is this project's `pom.xml` floor,
   for records)
 - Maven (`mvn` on PATH; the first run downloads JUnit from Maven Central)
@@ -24,12 +24,12 @@ this repo's checkout instead, prefix every `heddle` command with `uv run`.
 mvn test
 ```
 
-## The heddle loop
+## The hashloom loop
 
 ```bash
-heddle init && heddle index        # derive the store from contracts/
-heddle verify --radius Employee TimeSheet PaySlip withholdingCents formatCents
-heddle status                      # dirty units, cache hit-rate
+hashloom init && hashloom index        # derive the store from contracts/
+hashloom verify --radius Employee TimeSheet PaySlip withholdingCents formatCents
+hashloom status                      # dirty units, cache hit-rate
 ```
 
 Those five roots cover the whole graph, so the first `verify` runs Maven for
@@ -44,7 +44,7 @@ Edit the body of `withholdingCents` in
 bracket — then:
 
 ```bash
-heddle verify --radius withholdingCents
+hashloom verify --radius withholdingCents
 ```
 
 Exactly one unit re-runs, and it *fails* its bracket table: the contract
@@ -59,7 +59,7 @@ addressing: `Class.method` impl quals, and dotted test node ids into the
 ## Point an agent at it
 
 ```bash
-heddle serve    # MCP over stdio: get_contract, put_contract, get_dependents, verify, status
+hashloom serve    # MCP over stdio: get_contract, put_contract, get_dependents, verify, status
 ```
 
 The agent workflow and working rules live in

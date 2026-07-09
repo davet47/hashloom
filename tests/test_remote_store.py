@@ -14,16 +14,16 @@ from pathlib import Path
 
 import pytest
 
-from heddle import api
-from heddle.cache_server import CacheServer
-from heddle.config import resolve_shared_store
-from heddle.errors import HeddleError
-from heddle.indexer import index
-from heddle.project import init_project
-from heddle.remote import RemoteStore
-from heddle.shared import LayeredStore
-from heddle.store import SqliteStore
-from heddle.verify import verify_one
+from hashloom import api
+from hashloom.cache_server import CacheServer
+from hashloom.config import resolve_shared_store
+from hashloom.errors import HashloomError
+from hashloom.indexer import index
+from hashloom.project import init_project
+from hashloom.remote import RemoteStore
+from hashloom.shared import LayeredStore
+from hashloom.store import SqliteStore
+from hashloom.verify import verify_one
 
 _TOKEN = "test-token"
 
@@ -84,7 +84,7 @@ def test_shared_green_served_to_second_client_over_http(cache, tmp_path):
     _make_project(root)
 
     # client A: local + remote shared. verify runs pytest once and publishes.
-    a_local = SqliteStore(root / ".heddle" / "a.db")
+    a_local = SqliteStore(root / ".hashloom" / "a.db")
     a = LayeredStore(a_local, RemoteStore(base, token))
     index(root, a)
     assert api.verify(root, a, ["total"])["results"][0]["status"] == "pass"
@@ -95,7 +95,7 @@ def test_shared_green_served_to_second_client_over_http(cache, tmp_path):
     assert RemoteStore(base, token).get_blob(blob_hash) is not None
 
     # client B: fresh local, same remote. the green is served WITHOUT pytest.
-    b_local = SqliteStore(root / ".heddle" / "b.db")
+    b_local = SqliteStore(root / ".hashloom" / "b.db")
     b = LayeredStore(b_local, RemoteStore(base, token))
     index(root, b)
     assert api.verify(root, b, ["total"])["results"][0]["status"] == "cached-pass"
@@ -111,7 +111,7 @@ def test_failures_not_published_over_http(cache, tmp_path):
     _make_project(root)
     (root / "src" / "x.py").write_text("def total(xs):\n    return 0\n")  # wrong
 
-    a = LayeredStore(SqliteStore(root / ".heddle" / "a.db"), RemoteStore(base, token))
+    a = LayeredStore(SqliteStore(root / ".hashloom" / "a.db"), RemoteStore(base, token))
     index(root, a)
     r = verify_one(root, a, "total")  # verify_one exposes the cache key (api.verify hides it)
     assert r["status"] == "fail"
@@ -122,7 +122,7 @@ def test_failures_not_published_over_http(cache, tmp_path):
                 {"key": r["key"], "contract_name": "total", "status": "fail", "summary": "x"}) == 400
 
     # a second client re-runs and also fails; no shared green crossed the boundary
-    b = LayeredStore(SqliteStore(root / ".heddle" / "b.db"), RemoteStore(base, token))
+    b = LayeredStore(SqliteStore(root / ".hashloom" / "b.db"), RemoteStore(base, token))
     index(root, b)
     assert api.verify(root, b, ["total"])["results"][0]["status"] == "fail"
 
@@ -132,7 +132,7 @@ def test_unreachable_shared_degrades_to_local_verify(tmp_path):
     root.mkdir()
     _make_project(root)
     dead = RemoteStore("http://127.0.0.1:1", _TOKEN, timeout=1.0)  # nothing listens
-    local = SqliteStore(root / ".heddle" / "x.db")
+    local = SqliteStore(root / ".hashloom" / "x.db")
     store = LayeredStore(local, dead)
 
     index(root, store)  # blob write-through to a dead store must not raise
@@ -153,7 +153,7 @@ def test_auth_rejected_but_verify_still_degrades(cache, tmp_path):
     root = tmp_path / "proj"
     root.mkdir()
     _make_project(root)
-    local = SqliteStore(root / ".heddle" / "x.db")
+    local = SqliteStore(root / ".hashloom" / "x.db")
     store = LayeredStore(local, RemoteStore(base, "wrong-token"))
     index(root, store)
     assert api.verify(root, store, ["total"])["results"][0]["status"] == "pass"
@@ -163,7 +163,7 @@ def test_auth_rejected_but_verify_still_degrades(cache, tmp_path):
 
 def test_resolve_shared_store_validation(tmp_path):
     init_project(tmp_path)
-    cfg = tmp_path / ".heddle" / "config.json"
+    cfg = tmp_path / ".hashloom" / "config.json"
 
     cfg.write_text("{}")
     assert resolve_shared_store(tmp_path) is None  # no shared block -> local only
@@ -176,6 +176,6 @@ def test_resolve_shared_store_validation(tmp_path):
                 {"shared": {"url": "http://h"}},      # missing token
                 {"shared": {"url": "", "token": "t"}}):  # empty url
         cfg.write_text(json.dumps(bad))
-        with pytest.raises(HeddleError) as e:
+        with pytest.raises(HashloomError) as e:
             resolve_shared_store(tmp_path)
         assert e.value.code == "bad_config"

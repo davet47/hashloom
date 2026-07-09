@@ -1,9 +1,9 @@
-"""Full-sweep token benchmark for any heddle project: raw files vs heddle.
+"""Full-sweep token benchmark for any hashloom project: raw files vs hashloom.
 
 The same methodology as bench/benchmark.py, generalized: sweep every contract
 that has an impl and tests, regenerating each once, and compare what an agent
 reads in raw mode (the unit's and every transitive dep's spec + source, the
-unit's tests, and one full test-suite run's output) against heddle mode (the
+unit's tests, and one full test-suite run's output) against hashloom mode (the
 get_contract packet, a blast-radius check, and the verify response).
 
 Language-aware only where it must be: the suite-output component runs each
@@ -31,10 +31,10 @@ sys.path.insert(0, str(REPO / "src"))
 
 import yaml  # noqa: E402
 
-from heddle import api, tokens  # noqa: E402
-from heddle.indexer import index  # noqa: E402
-from heddle.project import db_path, init_project  # noqa: E402
-from heddle.store import Store, SqliteStore  # noqa: E402
+from hashloom import api, tokens  # noqa: E402
+from hashloom.indexer import index  # noqa: E402
+from hashloom.project import db_path, init_project  # noqa: E402
+from hashloom.store import Store, SqliteStore  # noqa: E402
 
 SUITE_CMDS = {
     ".py": [sys.executable, "-B", "-m", "pytest"],
@@ -45,7 +45,7 @@ SUITE_CMDS = {
 
 
 def fresh_store(root: Path) -> Store:
-    shutil.rmtree(root / ".heddle", ignore_errors=True)
+    shutil.rmtree(root / ".hashloom", ignore_errors=True)
     init_project(root)
     store = SqliteStore(db_path(root))
     index(root, store)
@@ -94,7 +94,7 @@ def raw_task_tokens(root: Path, store: Store, name: str, suite_tokens: int) -> i
     return tokens.count(spec_text) + tokens.count(src_text) + suite_tokens
 
 
-def heddle_task_tokens(root: Path, store: Store, name: str) -> int:
+def hashloom_task_tokens(root: Path, store: Store, name: str) -> int:
     """Tokens an agent reads to regenerate `name` through the MCP tools."""
     responses = [
         api.get_contract(root, store, name),
@@ -111,20 +111,20 @@ def main() -> None:
     skipped = len(store.contract_names()) - len(names)
 
     # warm the cache the way a real project would be: everything verified green
-    # once, so heddle-mode verify responses are the cached-pass size
+    # once, so hashloom-mode verify responses are the cached-pass size
     api.verify(root, store, names)
     suite_tokens = suite_output_tokens(root, names, store)
 
     rows = []
     for name in names:
         raw = raw_task_tokens(root, store, name, suite_tokens)
-        via = heddle_task_tokens(root, store, name)
+        via = hashloom_task_tokens(root, store, name)
         rows.append((name, raw, via, raw / via))
     rows.sort(key=lambda r: -r[3])
 
     width = max(len(r[0]) for r in rows)
     print(f"\nsuite output read per raw regeneration: {suite_tokens} tokens")
-    print(f"\n{'unit':<{width}}  {'raw files':>10}  {'heddle':>10}  {'reduction':>10}")
+    print(f"\n{'unit':<{width}}  {'raw files':>10}  {'hashloom':>10}  {'reduction':>10}")
     print("-" * (width + 38))
     for name, raw, via, ratio in rows:
         print(f"{name:<{width}}  {raw:>10,}  {via:>10,}  {ratio:>9.1f}x")

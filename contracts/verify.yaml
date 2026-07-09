@@ -1,6 +1,6 @@
 name: verify
 signature: "(root: Path, store: Store, names: str | list[str], python=None, timeout=None, pycache_trust=True, radius=False) -> dict"
-deps: [Store, verification_key, HeddleError]
+deps: [Store, verification_key, HashloomError]
 invariants:
   - tests run only on a real cache miss; a matching non-stale green serves cached-pass
   - failures are never served from cache
@@ -15,5 +15,5 @@ tests:
   - tests/test_verify.py::test_radius_verifies_the_blast_radius_in_one_call
   - tests/test_verify.py::test_verify_flags_inferred_closure_even_on_cached_pass
   - tests/test_verify.py::test_confirming_inferred_contract_keeps_cached_green
-impl: src/heddle/api.py::verify
+impl: src/hashloom/api.py::verify
 status: confirmed

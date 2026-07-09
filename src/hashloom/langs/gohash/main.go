@@ -5,7 +5,7 @@
 // Qualname is a top-level func or type name, or "Type.method" for a method.
 // The dump drops source positions and comment/doc groups, so formatting,
 // comment, and doc-comment edits never change the hash, but a signature or body
-// change does. This is the Go analogue of heddle's Python ast.dump hash.
+// change does. This is the Go analogue of hashloom's Python ast.dump hash.
 //
 // The result is one line on stdout, exit 0, so it survives `go run` (which
 // collapses a non-zero program exit to 1):

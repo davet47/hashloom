@@ -1,21 +1,14 @@
-# heddle
+# hashloom
 
-> [!IMPORTANT]
-> **This project has been renamed to [hashloom](https://github.com/davet47/hashloom).**
-> `heddle-mcp` 0.3.3 is the final release under this name — from 0.4.0 on, install
-> [`hashloom`](https://pypi.org/project/hashloom/) instead. Same engine, same
-> contracts, same warp and weft; the name changed because the loom-part namespace
-> got crowded.
+[![CI](https://github.com/davet47/hashloom/actions/workflows/ci.yml/badge.svg)](https://github.com/davet47/hashloom/actions/workflows/ci.yml)
 
-[![CI](https://github.com/davet47/heddle/actions/workflows/ci.yml/badge.svg)](https://github.com/davet47/heddle/actions/workflows/ci.yml)
+![hashloom regenerating a unit: one ~300-token context packet plus a cached verification, instead of re-reading whole files](https://raw.githubusercontent.com/davet47/hashloom/main/docs/demo.gif)
 
-![heddle regenerating a unit: one ~300-token context packet plus a cached verification, instead of re-reading whole files](https://raw.githubusercontent.com/davet47/heddle/main/docs/demo.gif)
+**Hashloom treats software units as content-addressed contracts rather than files.** An MCP server that makes agent regeneration loops cheap.
 
-**Heddle treats software units as content-addressed contracts rather than files.** An MCP server that makes agent regeneration loops cheap.
+Because contracts are content-addressed and dependency-aware, agents reuse verification, compute blast radius precisely, and regenerate code from a few hundred tokens of context instead of re-reading whole files. Build systems ask which files changed. Hashloom asks which software obligations changed.
 
-Because contracts are content-addressed and dependency-aware, agents reuse verification, compute blast radius precisely, and regenerate code from a few hundred tokens of context instead of re-reading whole files. Build systems ask which files changed. Heddle asks which software obligations changed.
-
-The heddle is the part of a loom that holds the warp threads, the fixed, durable strands, while the shuttle weaves disposable weft through them. **Contracts are warp. Code is weft.**
+The name is a coinage that says exactly what it is: a loom keyed by hashes. On a loom, the warp threads are the fixed, durable strands, and the shuttle weaves disposable weft through them. **Contracts are warp. Code is weft.** (Until 0.3.3 this project shipped as `heddle-mcp`; the engine is unchanged.)
 
 ## The problem
 
@@ -27,7 +20,7 @@ Agents repeatedly pay to rediscover software structure. Spec-driven development 
 
 ## The model
 
-Heddle treats each software unit as a content-addressed contract with explicit dependencies, not a file. A contract is a small YAML spec (signature, invariants, examples, dependency names); the implementation behind it is regenerable weft. Because every contract is hashed and its dependencies are named, the structure an agent keeps re-deriving from files becomes something heddle computes once and serves.
+Hashloom treats each software unit as a content-addressed contract with explicit dependencies, not a file. A contract is a small YAML spec (signature, invariants, examples, dependency names); the implementation behind it is regenerable weft. Because every contract is hashed and its dependencies are named, the structure an agent keeps re-deriving from files becomes something hashloom computes once and serves.
 
 ## Outcomes
 
@@ -39,19 +32,19 @@ The model buys three things, all mechanical:
 
 ### The number
 
-Same three regeneration tasks on a 20-contract sample project, once with raw file reads, once through heddle (tiktoken cl100k, reproduce with `uv run python bench/benchmark.py`):
+Same three regeneration tasks on a 20-contract sample project, once with raw file reads, once through hashloom (tiktoken cl100k, reproduce with `uv run python bench/benchmark.py`):
 
-| task                | raw files | heddle | reduction |
+| task                | raw files | hashloom | reduction |
 |---------------------|----------:|-------:|----------:|
 | revenue_by_region   |     1,925 |    369 |      5.2x |
 | top_customers       |     2,137 |    337 |      6.3x |
 | revenue_by_category |     1,942 |    396 |      4.9x |
 | **total**           | **6,004** | **1,102** | **5.4x** |
 
-Raw mode counts what a file-based agent reads per task: the unit's spec file, every transitive dep's spec file, every source module in the dep closure, the unit's test file, and the output of running the suite. It is deliberately generous to the baseline: it assumes the agent already knows the exact dependency closure, which is precisely the thing heddle computes for you.
+Raw mode counts what a file-based agent reads per task: the unit's spec file, every transitive dep's spec file, every source module in the dep closure, the unit's test file, and the output of running the suite. It is deliberately generous to the baseline: it assumes the agent already knows the exact dependency closure, which is precisely the thing hashloom computes for you.
 
 The same methodology sweeps *every* unit of all four example projects —
-Python, Go, TypeScript, and Java — via `bench/sweep.py`, and works on any heddle
+Python, Go, TypeScript, and Java — via `bench/sweep.py`, and works on any hashloom
 project including yours. Full sweeps average lower than the gate (they count
 the leaf types that barely benefit); the ratio tracks dependency depth, so
 deeper projects score higher. All the numbers, their distributions, and the
@@ -60,21 +53,21 @@ honest caveats live in [docs/benchmarks.md](docs/benchmarks.md).
 ## Quickstart
 
 ```bash
-pip install heddle-mcp
-# or from source: pip install "git+https://github.com/davet47/heddle"
+pip install hashloom
+# or from source: pip install "git+https://github.com/davet47/hashloom"
 
 cd your-project
-heddle init                 # creates .heddle/ and contracts/
-heddle index                # builds the store from contracts/
+hashloom init                 # creates .hashloom/ and contracts/
+hashloom index                # builds the store from contracts/
 ```
 
 Point Claude Code at it:
 
 ```bash
-claude mcp add heddle -- heddle serve
+claude mcp add hashloom -- hashloom serve
 ```
 
-(Stdio transport; the server resolves the project by walking up from its working directory to the nearest `.heddle/`.)
+(Stdio transport; the server resolves the project by walking up from its working directory to the nearest `.hashloom/`.)
 
 New to the workflow? [docs/getting-started.md](docs/getting-started.md) walks through building a package contract-first with an agent — the working rules to give it, the review loop, and the verify gate.
 
@@ -113,7 +106,7 @@ A contract an agent reverse-engineers from existing code can declare that it has
 
 - **Contract hash**: sha256 over a canonical form: keys sorted, whitespace normalised, comments stripped, example order preserved, dep order ignored. `impl`, `tests`, `invariants`, and `status` are excluded, so **relocating files never invalidates**, rewording an invariant is free, and confirming an inferred contract never invalidates anything. Invariants are documentation, not a machine obligation; the real check is the tests, whose source is in the verification key.
 - **Impl hash**: sha256 over the normalised AST of the implementation, so reformatting and comment edits never bust the cache. Docstrings are stripped too.
-- **Verification key**: `(contract hash, impl hash, test-source hash, toolchain identity, transitive dep contract hashes)`. Heddle caches verification results, keyed so that a change to any contract in the closure, to the implementation, to a test's own source, or to the toolchain version forces a re-run. The toolchain component (`python 3.11.7`, `go 1.21.5`, `node <v> ts <v>`, `java 21.0.3`) is what makes a shared or cross-machine green sound: a 3.11 pass is never served to 3.13. Failures are never served from cache. Two caveats. A cached pass assumes deterministic tests, so a green result that depended on wall-clock time, network, or randomness can outlive the condition that made it pass. And the test-source hash covers each test function's own normalised AST, not the conftest fixtures or helpers it calls, so changing only those will not force a re-run yet (see [Roadmap](ROADMAP.md)).
+- **Verification key**: `(contract hash, impl hash, test-source hash, toolchain identity, transitive dep contract hashes)`. Hashloom caches verification results, keyed so that a change to any contract in the closure, to the implementation, to a test's own source, or to the toolchain version forces a re-run. The toolchain component (`python 3.11.7`, `go 1.21.5`, `node <v> ts <v>`, `java 21.0.3`) is what makes a shared or cross-machine green sound: a 3.11 pass is never served to 3.13. Failures are never served from cache. Two caveats. A cached pass assumes deterministic tests, so a green result that depended on wall-clock time, network, or randomness can outlive the condition that made it pass. And the test-source hash covers each test function's own normalised AST, not the conftest fixtures or helpers it calls, so changing only those will not force a re-run yet (see [Roadmap](ROADMAP.md)).
 
 ## MCP tools (the entire surface)
 
@@ -130,12 +123,12 @@ Every tool returns structured errors — `{"error": {"code": "unknown_dep", "mes
 ### The verify interpreter
 
 `verify` runs your tests with the project's own python, resolved in order:
-`heddle serve --python PATH` → `.heddle/config.json` (`{"python": "..."}`) → an
-auto-detected `<project>/.venv` → the interpreter running heddle. So a
-globally-installed heddle can verify a project against its own virtualenv without
-being installed into it; `heddle status` shows which interpreter it resolved.
+`hashloom serve --python PATH` → `.hashloom/config.json` (`{"python": "..."}`) → an
+auto-detected `<project>/.venv` → the interpreter running hashloom. So a
+globally-installed hashloom can verify a project against its own virtualenv without
+being installed into it; `hashloom status` shows which interpreter it resolved.
 
-`.heddle/config.json` also takes `verify_timeout` (seconds per pytest run,
+`.hashloom/config.json` also takes `verify_timeout` (seconds per pytest run,
 default 300) for suites that need longer than the default, and `pycache_trust`
 (default `true`); set `pycache_trust: false` — or pass `--no-pycache-trust` — to
 clear the project's `__pycache__` before each verify run, so a stale `.pyc` can
@@ -148,7 +141,7 @@ normalised-AST hasher and a test runner, so the same cosmetic-vs-meaning hashing
 semantics hold per language:
 
 - **Go** (`.go`): hashes via the stdlib `go/ast`, runs `go test -json`. Toolchain
-  resolves like the interpreter: `.heddle/config.json` `{"go": "..."}`, else `go`
+  resolves like the interpreter: `.hashloom/config.json` `{"go": "..."}`, else `go`
   on PATH.
 - **TypeScript** (`.ts`/`.tsx`/`.mts`/`.cts`): hashes via the target project's
   *own* `typescript` compiler API, auto-detects the test runner from
@@ -164,16 +157,16 @@ Python stays the default; a project can mix languages freely.
 
 ### Team-shared verification cache
 
-By default the cache lives in your local `.heddle/store.db`. Point it at a shared
+By default the cache lives in your local `.hashloom/store.db`. Point it at a shared
 backend and one green verify serves the whole team — CI verifies a unit once and
 every teammate's agent gets `cached-pass`:
 
 ```jsonc
-// .heddle/config.json
+// .hashloom/config.json
 {"shared": {"url": "https://cache.internal:8770", "token": "..."}}
 ```
 
-Run the backend anywhere with `python -m heddle.cache_server` (a small
+Run the backend anywhere with `python -m hashloom.cache_server` (a small
 bearer-token HTTP service over a SQLite store; an operational process, not a CLI
 command). Only greens are published — failures never cross the boundary — and the
 toolchain-in-key rule above keeps a shared green sound across machines. If the
@@ -181,23 +174,23 @@ shared store is unreachable, verify degrades silently to local.
 
 ## CLI
 
-`heddle init` · `heddle index` · `heddle serve` · `heddle status` · `heddle verify`. The sqlite store under `.heddle/` is derived state: delete it any time and `heddle index` rebuilds it from `contracts/`.
+`hashloom init` · `hashloom index` · `hashloom serve` · `hashloom status` · `hashloom verify`. The sqlite store under `.hashloom/` is derived state: delete it any time and `hashloom index` rebuilds it from `contracts/`.
 
-`heddle verify <name>…` runs the same cached verification as the MCP tool from the command line and exits nonzero unless every unit is green (a failure, an unknown name, or an unverifiable unit all block) — drop it in CI or a pre-commit hook. `--radius` widens each name to itself plus every transitive dependent, so one command gates a change's whole blast radius: `heddle verify --radius Sale`.
+`hashloom verify <name>…` runs the same cached verification as the MCP tool from the command line and exits nonzero unless every unit is green (a failure, an unknown name, or an unverifiable unit all block) — drop it in CI or a pre-commit hook. `--radius` widens each name to itself plus every transitive dependent, so one command gates a change's whole blast radius: `hashloom verify --radius Sale`.
 
 ## Try the sample project
 
 ```bash
 cd examples/sales
-heddle init && heddle index && heddle serve   # then point your agent at it
+hashloom init && hashloom index && hashloom serve   # then point your agent at it
 ```
 
 20 contracts, 25 tests, three dependency layers deep. Every example directory
 ships its own README with per-language run instructions.
 
 There are counterpart examples in Go at `examples/go-ledger` (8 contracts over a small
-double-entry ledger, same loop: `heddle init && heddle index`, then
-`heddle verify --radius Entry` gates the blast radius with `go test` under the
+double-entry ledger, same loop: `hashloom init && hashloom index`, then
+`hashloom verify --radius Entry` gates the blast radius with `go test` under the
 hood — needs a Go toolchain), in TypeScript at `examples/ts-cart`
 (8 contracts over a shopping cart; `npm install` first for its `typescript`,
 then the same loop — verification runs on Node's built-in `node:test`, Node
@@ -205,7 +198,7 @@ then the same loop — verification runs on Node's built-in `node:test`, Node
 payroll run, three layers deep — records, `Class.method` quals, a parameterized
 bracket table, and a `@Nested` test class with dotted node ids; the shape of a
 Spring service layer with zero framework dependencies. Same loop —
-`heddle verify --radius TimeSheet` runs Maven under the hood; needs a JDK >= 17
+`hashloom verify --radius TimeSheet` runs Maven under the hood; needs a JDK >= 17
 and Maven).
 
 ## Development
@@ -222,4 +215,4 @@ Kept deliberately small: 5 MCP tools, 5 CLI commands, contracts as plain YAML. E
 
 Apache 2.0
 
-<!-- mcp-name: io.github.davet47/heddle -->
+<!-- mcp-name: io.github.davet47/hashloom -->

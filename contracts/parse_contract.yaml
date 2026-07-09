@@ -1,6 +1,6 @@
 name: parse_contract
 signature: "(text: str, expect_name: str | None = None) -> dict"
-deps: [HeddleError]
+deps: [HashloomError]
 invariants:
   - rejects unknown keys, missing name/signature, malformed lists, bad status values
   - name must be a safe relative path (no absolute, no '..', '/' marks namespaces)
@@ -12,5 +12,5 @@ tests:
   - tests/test_contract_hash.py::test_bad_yaml_rejected
   - tests/test_contract_hash.py::test_name_mismatch_rejected
   - tests/test_contract_hash.py::test_invalid_status_rejected
-impl: src/heddle/contract.py::parse_contract
+impl: src/hashloom/contract.py::parse_contract
 status: confirmed

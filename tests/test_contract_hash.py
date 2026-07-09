@@ -3,8 +3,8 @@ hashes; meaning changes must."""
 
 import pytest
 
-from heddle.contract import contract_hash, parse_contract
-from heddle.errors import HeddleError
+from hashloom.contract import contract_hash, parse_contract
+from hashloom.errors import HashloomError
 
 BASE = """
 name: revenue_by_region
@@ -90,7 +90,7 @@ def test_status_does_not_change_hash():
 
 
 def test_invalid_status_rejected():
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         parse_contract(BASE + "status: draft\n")
     assert exc.value.code == "invalid_shape"
 
@@ -112,24 +112,24 @@ def test_example_change_changes_hash():
 
 
 def test_unknown_key_rejected():
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         parse_contract(BASE + "\nnotes: extra\n")
     assert exc.value.code == "invalid_shape"
 
 
 def test_missing_signature_rejected():
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         parse_contract("name: thing\n")
     assert exc.value.code == "invalid_shape"
 
 
 def test_bad_yaml_rejected():
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         parse_contract("name: [unclosed")
     assert exc.value.code == "invalid_yaml"
 
 
 def test_name_mismatch_rejected():
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         parse_contract(BASE, expect_name="something_else")
     assert exc.value.code == "name_mismatch"

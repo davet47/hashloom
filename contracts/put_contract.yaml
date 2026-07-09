@@ -1,6 +1,6 @@
 name: put_contract
 signature: "(root: Path, store: Store, name: str, yaml_text: str) -> dict"
-deps: [parse_contract, contract_hash, diff_contracts, Store, HeddleError]
+deps: [parse_contract, contract_hash, diff_contracts, Store, HashloomError]
 invariants:
   - validates before writing — unknown deps, self-deps, name collisions, and escapes of contracts/ all refuse
   - writes the file atomically and updates the store under a per-name lock, never leaving the two disagreeing
@@ -13,5 +13,5 @@ tests:
   - tests/test_store_and_api.py::test_put_contract_rejects_unknown_dep
   - tests/test_store_and_api.py::test_put_contract_rejects_self_dep
   - tests/test_store_and_api.py::test_put_contract_flags_inferred_writes_and_dependents
-impl: src/heddle/api.py::put_contract
+impl: src/hashloom/api.py::put_contract
 status: confirmed

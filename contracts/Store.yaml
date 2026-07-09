@@ -3,11 +3,11 @@ signature: "Protocol: contracts, dependency edges, impls + content-addressed blo
 invariants:
   - backend-agnostic — SqliteStore is the local impl; shared/remote backends satisfy the same surface
   - getters return plain dicts, never backend-specific row types
-  - derived state — deletable and rebuildable from contracts/ via heddle index at any time
+  - derived state — deletable and rebuildable from contracts/ via hashloom index at any time
   - blobs are content-addressed and deduped; put_blob is idempotent
 tests:
   - tests/test_store_and_api.py::test_index_builds_graph
   - tests/test_store_and_api.py::test_reindex_is_stable
   - tests/test_store_and_api.py::test_put_blob_is_content_addressed_and_round_trips
-impl: src/heddle/store.py::Store
+impl: src/hashloom/store.py::Store
 status: confirmed

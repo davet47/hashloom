@@ -6,12 +6,12 @@ labels: enhancement
 ---
 
 **The problem**
-<!-- What are you trying to do that heddle makes hard today? -->
+<!-- What are you trying to do that hashloom makes hard today? -->
 
 **Proposed direction**
 
 **Does it fit the surface?**
-<!-- heddle is deliberately small: 5 MCP tools, 5 CLI commands, and the README
+<!-- hashloom is deliberately small: 5 MCP tools, 5 CLI commands, and the README
 documents the entire surface. If this adds to that surface, say why it earns a
 place (the failure mode we guard against is "scope creep toward Loom"). Where the
 project is already headed lives in ROADMAP.md. -->

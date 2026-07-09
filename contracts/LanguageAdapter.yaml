@@ -1,15 +1,15 @@
 name: LanguageAdapter
 signature: "Protocol: per-language impl/test-source hashing, toolchain resolution, and test running — six methods, one adapter per impl extension"
-deps: [HeddleError]
+deps: [HashloomError]
 invariants:
   - adapter_for routes on the impl path's extension (.go, .ts/.tsx/.mts/.cts, .java) with Python as the default — one lazy singleton per language, no new contract syntax
   - impl_hash is formatting/comment/doc-neutral and behaviour-sensitive; a missing file or name raises impl_not_found, unparseable source impl_syntax_error
   - test_source_hash never raises — unresolvable node ids degrade to their literal id, and node-id order never changes the hash
-  - toolchains resolve per language (override, then the .heddle/config.json key, then PATH/auto-detect) and identities are version-only strings so cross-OS greens share
+  - toolchains resolve per language (override, then the .hashloom/config.json key, then PATH/auto-detect) and identities are version-only strings so cross-OS greens share
   - run_tests returns (ok, summary) with failure summaries capped at SUMMARY_MAX_TOKENS; a missing toolchain or test runner raises bad_toolchain, a run that cannot execute raises tests_failed_to_run — never a stack trace in a summary
 tests:
   - tests/test_langs_seam.py::test_adapter_for_routes_by_extension_and_caches
   - tests/test_langs_seam.py::test_every_adapter_implements_the_protocol
   - tests/test_langs_seam.py::test_failure_summaries_are_capped
-impl: src/heddle/langs/__init__.py::LanguageAdapter
+impl: src/hashloom/langs/__init__.py::LanguageAdapter
 status: inferred

@@ -2,7 +2,7 @@
 Gradle as the test runner.
 
 Hashing shells out to `javahash/JavaHash.java` via Java's single-file source
-launcher (JDK >= 11), so heddle writes no hand-rolled Java parser — the same
+launcher (JDK >= 11), so hashloom writes no hand-rolled Java parser — the same
 stdlib-only stance as the Go adapter. The runner is auto-detected from the
 project: `pom.xml` routes to Maven, `build.gradle`/`build.gradle.kts` to Gradle,
 and a committed `mvnw`/`gradlew` wrapper is preferred over the PATH binary so a
@@ -25,11 +25,11 @@ from pathlib import Path
 
 from .. import tokens
 from ..config import load_config
-from ..errors import HeddleError
+from ..errors import HashloomError
 from . import SUMMARY_MAX_TOKENS
 
 _JAVAHASH = Path(__file__).parent / "javahash" / "JavaHash.java"
-_GRADLE_INIT = Path(__file__).parent / "heddle-init.gradle"
+_GRADLE_INIT = Path(__file__).parent / "hashloom-init.gradle"
 _JAVA_VERSION = re.compile(r"^\S+\s+(\S+)")  # `openjdk 21.0.3 2024-04-16 LTS`
 # a surefire failure line naming a test: `[ERROR]   CalcTest.totalSums:12 expected: <3>...`
 _MVN_FAIL_LINE = re.compile(r"\[ERROR\]\s+([A-Za-z_$][\w$]*\.[\w$]+.*)")
@@ -60,14 +60,14 @@ class JavaAdapter:
             return self._java_cache[key]
         cand = override or load_config(root).get("java") or shutil.which("java")
         if not cand:
-            raise HeddleError(
+            raise HashloomError(
                 "bad_toolchain",
-                "no Java toolchain found (install a JDK, or set 'java' in .heddle/config.json)",
+                "no Java toolchain found (install a JDK, or set 'java' in .hashloom/config.json)",
             )
         try:
             subprocess.run([cand, "--version"], capture_output=True, check=True, timeout=30)
         except (OSError, subprocess.SubprocessError):
-            raise HeddleError("bad_toolchain", f"'{cand}' is not a working Java toolchain (JDK >= 11)")
+            raise HashloomError("bad_toolchain", f"'{cand}' is not a working Java toolchain (JDK >= 11)")
         self._java_cache[key] = cand
         return cand
 
@@ -81,7 +81,7 @@ class JavaAdapter:
                 [java, "--version"], capture_output=True, text=True, check=True, timeout=30
             )
         except (OSError, subprocess.SubprocessError):
-            raise HeddleError("bad_toolchain", f"could not read the Java version from '{java}'")
+            raise HashloomError("bad_toolchain", f"could not read the Java version from '{java}'")
         first = proc.stdout.strip().splitlines()[0] if proc.stdout.strip() else ""
         m = _JAVA_VERSION.match(first)
         # version only (drop vendor and build date) so cross-OS/vendor greens share
@@ -126,13 +126,13 @@ class JavaAdapter:
         if kind == "hash":
             return rest
         if kind == "not_found":
-            raise HeddleError("impl_not_found", rest, contract=contract)
+            raise HashloomError("impl_not_found", rest, contract=contract)
         if kind == "syntax":
-            raise HeddleError("impl_syntax_error", rest, contract=contract)
+            raise HashloomError("impl_syntax_error", rest, contract=contract)
         if kind == "notoolchain":
-            raise HeddleError("bad_toolchain", rest, contract=contract)
+            raise HashloomError("bad_toolchain", rest, contract=contract)
         # the helper itself could not run (JRE-only java, helper error, ...)
-        raise HeddleError(
+        raise HashloomError(
             "tests_failed_to_run",
             tokens.truncate("java ast helper failed: " + _oneline(proc.stderr or proc.stdout), 60),
         )
@@ -148,7 +148,7 @@ class JavaAdapter:
                 qual = f"{Path(path_str).stem}.{test}"
                 try:
                     h = self._hash_def(root, path_str, qual)
-                except (HeddleError, OSError, ValueError, subprocess.SubprocessError):
+                except (HashloomError, OSError, ValueError, subprocess.SubprocessError):
                     h = None
             parts.append(f"{nid}={h or 'id'}")
         return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
@@ -197,7 +197,7 @@ class JavaAdapter:
                 cmd, cwd=root, env=env, capture_output=True, text=True, timeout=timeout
             )
         except subprocess.TimeoutExpired:
-            raise HeddleError(
+            raise HashloomError(
                 "tests_failed_to_run", f"{runner} test timed out after {timeout:g}s"
             )
 
@@ -225,7 +225,7 @@ class JavaAdapter:
             mvn = shutil.which("mvn")
             if mvn:
                 return ("maven", [mvn])
-            raise HeddleError(
+            raise HashloomError(
                 "bad_toolchain", "pom.xml found but no mvn on PATH (install Maven or commit the mvnw wrapper)"
             )
         if (root / "build.gradle").is_file() or (root / "build.gradle.kts").is_file():
@@ -235,11 +235,11 @@ class JavaAdapter:
             gradle = shutil.which("gradle")
             if gradle:
                 return ("gradle", [gradle])
-            raise HeddleError(
+            raise HashloomError(
                 "bad_toolchain",
                 "build.gradle found but no gradle on PATH (install Gradle or commit the gradlew wrapper)",
             )
-        raise HeddleError(
+        raise HashloomError(
             "bad_toolchain", "no pom.xml or build.gradle found — Java tests need Maven or Gradle"
         )
 
@@ -261,7 +261,7 @@ class JavaAdapter:
             first_error = next(
                 (l.strip() for l in out.splitlines() if l.strip().startswith("[ERROR]")), out
             )
-            raise HeddleError(
+            raise HashloomError(
                 "tests_failed_to_run",
                 tokens.truncate("mvn test could not run: " + _oneline(first_error), 60),
             )
@@ -286,7 +286,7 @@ class JavaAdapter:
             if m:
                 detail = next((l.strip() for l in lines[i + 1: i + 4] if l.strip()), "failed")
                 return (False, tokens.truncate(f"{m.group(1)}: {_oneline(detail)}", SUMMARY_MAX_TOKENS))
-        raise HeddleError(
+        raise HashloomError(
             "tests_failed_to_run",
             tokens.truncate(
                 "gradle test could not run: " + _oneline(proc.stderr or proc.stdout), 60

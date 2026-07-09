@@ -9,12 +9,12 @@ import textwrap
 
 import pytest
 
-from heddle import api
-from heddle.contract import parse_contract
-from heddle.errors import HeddleError
-from heddle.indexer import index
-from heddle.project import db_path, init_project
-from heddle.store import SqliteStore
+from hashloom import api
+from hashloom.contract import parse_contract
+from hashloom.errors import HashloomError
+from hashloom.indexer import index
+from hashloom.project import db_path, init_project
+from hashloom.store import SqliteStore
 
 
 def _project(tmp_path):
@@ -83,20 +83,20 @@ def test_flat_names_still_work(tmp_path):
 
 @pytest.mark.parametrize("bad", ["../evil", "/etc/passwd", "a/../../b", "ns//x"])
 def test_parse_rejects_unsafe_names(bad):
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         parse_contract(f'name: "{bad}"\nsignature: "() -> None"\n')
     assert e.value.code == "invalid_name"
 
 
 def test_parse_rejects_backslash_name():
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         parse_contract("name: 'a\\\\b'\nsignature: \"() -> None\"\n")
     assert e.value.code == "invalid_name"
 
 
 def test_put_contract_rejects_escaping_name(tmp_path):
     root, store = _project(tmp_path)
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         api.put_contract(root, store, "../evil", 'name: "../evil"\nsignature: "() -> None"\n')
     assert e.value.code in ("invalid_name", "unsafe_name")
     assert not (root.parent / "evil.yaml").exists()  # nothing written outside contracts/
@@ -126,7 +126,7 @@ def test_duplicate_name_from_yaml_and_yml_is_rejected(tmp_path):
     root, store = _project(tmp_path)
     _write(root, "ns/thing.yaml", 'name: ns/thing\nsignature: "() -> A"\n')
     _write(root, "ns/thing.yml", 'name: ns/thing\nsignature: "() -> B"\n')
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         index(root, store)
     assert e.value.code == "duplicate_contract"
 
@@ -146,7 +146,7 @@ def test_case_variant_names_handled_per_filesystem(tmp_path):
     body = 'name: billing/invoice\nsignature: "() -> B"\n'
     if _case_insensitive_fs(root):
         # same file on disk: refuse, don't silently clobber + split store from disk
-        with pytest.raises(HeddleError) as e:
+        with pytest.raises(HashloomError) as e:
             api.put_contract(root, store, "billing/invoice", body)
         assert e.value.code == "name_collision"
         assert "billing/Invoice" in store.contract_names()
@@ -157,7 +157,7 @@ def test_case_variant_names_handled_per_filesystem(tmp_path):
 
 
 def test_lock_key_is_injective_for_slash_vs_double_underscore():
-    from heddle.project import _lock_key
+    from hashloom.project import _lock_key
 
     assert _lock_key("a/b") != _lock_key("a__b")
 
@@ -170,7 +170,7 @@ def test_symlink_escape_is_refused(tmp_path):
         (root / "contracts" / "escape").symlink_to(outside, target_is_directory=True)
     except (OSError, NotImplementedError):
         pytest.skip("filesystem does not support symlinks")
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         api.put_contract(root, store, "escape/evil", 'name: escape/evil\nsignature: "() -> None"\n')
     assert e.value.code == "unsafe_name"
     assert not (outside / "evil.yaml").exists()  # nothing written outside contracts/
@@ -179,7 +179,7 @@ def test_symlink_escape_is_refused(tmp_path):
 def test_namespaced_name_mismatch_is_rejected(tmp_path):
     root, store = _project(tmp_path)
     _write(root, "billing/invoice.yaml", 'name: invoice\nsignature: "() -> None"\n')  # missing ns prefix
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         index(root, store)
     assert e.value.code == "name_mismatch"
 
@@ -206,7 +206,7 @@ def test_rejected_name_writes_nothing(tmp_path):
     root, store = _project(tmp_path)
     cdir = root / "contracts"
     before = sorted(p.name for p in cdir.rglob("*"))
-    with pytest.raises(HeddleError):
+    with pytest.raises(HashloomError):
         api.put_contract(root, store, "../evil", 'name: "../evil"\nsignature: "() -> None"\n')
     assert store.get_contract("../evil") is None
     assert sorted(p.name for p in cdir.rglob("*")) == before  # no file, no stray .tmp

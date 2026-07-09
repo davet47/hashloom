@@ -7,7 +7,7 @@
 // over javac's pretty-printed parse tree, so formatting, comments, and javadoc
 // edits never change it, but a signature or body change does. All overloads of
 // a named method hash together, in source order. This is the Java analogue of
-// heddle's Python ast.dump hash and Go ast.Fprint hash.
+// hashloom's Python ast.dump hash and Go ast.Fprint hash.
 //
 // The result is one line on stdout, exit 0:
 //

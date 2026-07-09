@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from heddle.indexer import index
-from heddle.project import db_path, init_project
-from heddle.store import SqliteStore
+from hashloom.indexer import index
+from hashloom.project import db_path, init_project
+from hashloom.store import SqliteStore
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 name: verification_key
 signature: "(store: Store, name: str, ihash: str, thash: str, toolchain: str) -> str"
-deps: [Store, contract_hash, impl_hash, HeddleError]
+deps: [Store, contract_hash, impl_hash, HashloomError]
 invariants:
   - sha256 over contract hash, impl hash, test-source hash, toolchain identity, and every transitive dep contract hash
   - any change in the closure — or a toolchain version change — produces a new key
@@ -8,5 +8,5 @@ invariants:
 tests:
   - tests/test_toolchain_key.py::test_verification_key_includes_the_toolchain
   - tests/test_toolchain_key.py::test_toolchain_change_busts_cache_and_status_agrees
-impl: src/heddle/verify.py::verification_key
+impl: src/hashloom/verify.py::verification_key
 status: confirmed

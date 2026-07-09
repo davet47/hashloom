@@ -6,12 +6,12 @@ through the TypeScript adapter — hashing via this project's *own* `typescript`
 compiler API, verification via Node's built-in `node:test` (no runner
 dependency at all).
 
-Commands assume `heddle` is on PATH (`pip install heddle-mcp`). Working from
-this repo's checkout instead, prefix every `heddle` command with `uv run`.
+Commands assume `hashloom` is on PATH (`pip install hashloom`). Working from
+this repo's checkout instead, prefix every `hashloom` command with `uv run`.
 
 ## Prerequisites
 
-- Node >= 22.6 (`node` on PATH, or `.heddle/config.json` → `{"node": "..."}`)
+- Node >= 22.6 (`node` on PATH, or `.hashloom/config.json` → `{"node": "..."}`)
 - `npm install` **first**, from this directory — it provides the `typescript`
   package the hasher resolves; without a resolvable `typescript` (here or in
   an ancestor's `node_modules`) every unit errors with `bad_toolchain`
@@ -22,12 +22,12 @@ this repo's checkout instead, prefix every `heddle` command with `uv run`.
 node --test --experimental-strip-types 'cart/*.test.ts'
 ```
 
-## The heddle loop
+## The hashloom loop
 
 ```bash
-heddle init && heddle index       # derive the store from contracts/
-heddle verify --radius Sku        # gate the widest blast radius in the project
-heddle status                     # dirty units, cache hit-rate
+hashloom init && hashloom index       # derive the store from contracts/
+hashloom verify --radius Sku        # gate the widest blast radius in the project
+hashloom status                     # dirty units, cache hit-rate
 ```
 
 The first `verify` runs `node:test` per unit; run it again and every unit
@@ -40,7 +40,7 @@ auto-detected; this one deliberately has no runner dependency.)
 Edit the body of `discountCents` in [cart/pricing.ts](cart/pricing.ts), then:
 
 ```bash
-heddle verify --radius discountCents
+hashloom verify --radius discountCents
 ```
 
 Exactly one unit re-runs: `totalCents` leans on `discountCents`'s *contract*,
@@ -50,7 +50,7 @@ edits change no hash — the compiler API sees through them.
 ## Point an agent at it
 
 ```bash
-heddle serve    # MCP over stdio: get_contract, put_contract, get_dependents, verify, status
+hashloom serve    # MCP over stdio: get_contract, put_contract, get_dependents, verify, status
 ```
 
 The agent workflow and working rules live in

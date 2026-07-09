@@ -13,13 +13,13 @@ from pathlib import Path
 
 import pytest
 
-from heddle import api
-from heddle.errors import HeddleError
-from heddle.indexer import index
-from heddle.langs import adapter_for
-from heddle.langs.java import JavaAdapter
-from heddle.project import db_path, init_project
-from heddle.store import SqliteStore
+from hashloom import api
+from hashloom.errors import HashloomError
+from hashloom.indexer import index
+from hashloom.langs import adapter_for
+from hashloom.langs.java import JavaAdapter
+from hashloom.project import db_path, init_project
+from hashloom.store import SqliteStore
 
 
 def _has_jdk() -> bool:
@@ -62,7 +62,7 @@ _POM = """\
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>heddle.fixture</groupId>
+  <groupId>hashloom.fixture</groupId>
   <artifactId>calcproj</artifactId>
   <version>0.0.1</version>
   <properties>
@@ -156,10 +156,10 @@ def test_java_surrounding_members_do_not_change_the_hash(tmp_path):
 def test_java_missing_def_and_file_raise_impl_not_found(tmp_path):
     _java_project(tmp_path)
     a = adapter_for(_IMPL)
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         a.impl_hash(tmp_path, "src/main/java/Calc.java::Calc.nope")
     assert e.value.code == "impl_not_found"
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         a.impl_hash(tmp_path, "src/main/java/Missing.java::Calc.total")
     assert e.value.code == "impl_not_found"
 
@@ -168,7 +168,7 @@ def test_java_missing_def_and_file_raise_impl_not_found(tmp_path):
 def test_java_impl_syntax_error(tmp_path):
     _java_project(tmp_path)
     (tmp_path / "src" / "main" / "java" / "Calc.java").write_text("public class Calc { static int total( {\n")
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         adapter_for(_IMPL).impl_hash(tmp_path, _IMPL)
     assert e.value.code == "impl_syntax_error"
 
@@ -186,7 +186,7 @@ def test_java_toolchain_identity_is_version_only(tmp_path):
 def test_java_runner_detection(tmp_path, monkeypatch):
     a = JavaAdapter()
     # no manifest at all -> structured refusal
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         a._detect_runner(tmp_path)
     assert e.value.code == "bad_toolchain"
 
@@ -203,7 +203,7 @@ def test_java_runner_detection(tmp_path, monkeypatch):
     # manifest present but nothing to run it with -> structured refusal
     monkeypatch.setattr(shutil, "which", lambda name: None)
     (tmp_path / "mvnw").unlink()
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         a._detect_runner(tmp_path)
     assert e.value.code == "bad_toolchain"
 
@@ -256,7 +256,7 @@ def test_java_maven_output_parsing():
     ok, summary = a._parse_maven(_proc(1, out))
     # the Results-section line wins over the `<<< FAILURE!` progress line
     assert not ok and "totalSums" in summary and "expected" in summary
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         a._parse_maven(_proc(1, "[ERROR] COMPILATION ERROR :\n[ERROR] Calc.java:[3,16] cannot find symbol\n"))
     assert e.value.code == "tests_failed_to_run"
 
@@ -274,7 +274,7 @@ def test_java_gradle_output_parsing():
         ok, summary = a._parse_gradle(_proc(1, line + detail))
         assert not ok and "expected" in summary, line
     # a compile error has no test-failure line: a runner error, not a fail
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         a._parse_gradle(_proc(1, "> Task :compileTestJava FAILED\nBUILD FAILED in 1s\n"))
     assert e.value.code == "tests_failed_to_run"
 

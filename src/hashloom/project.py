@@ -1,6 +1,6 @@
-"""Project layout: a heddle project is any directory with a .heddle/ marker.
+"""Project layout: a hashloom project is any directory with a .hashloom/ marker.
 
-contracts/ holds one YAML file per unit; .heddle/store.db is derived state.
+contracts/ holds one YAML file per unit; .hashloom/store.db is derived state.
 """
 
 from __future__ import annotations
@@ -10,14 +10,14 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
-from .errors import HeddleError
+from .errors import HashloomError
 
 try:
     import fcntl  # posix advisory file locks
 except ImportError:  # pragma: no cover - non-posix
     fcntl = None  # type: ignore[assignment]
 
-HEDDLE_DIR = ".heddle"
+HASHLOOM_DIR = ".hashloom"
 CONTRACTS_DIR = "contracts"
 DB_NAME = "store.db"
 LOCKS_DIR = "locks"
@@ -26,13 +26,13 @@ LOCKS_DIR = "locks"
 def find_root(start: Path | None = None) -> Path:
     cur = (start or Path.cwd()).resolve()
     for candidate in (cur, *cur.parents):
-        if (candidate / HEDDLE_DIR).is_dir():
+        if (candidate / HASHLOOM_DIR).is_dir():
             return candidate
-    raise HeddleError("no_project", f"no {HEDDLE_DIR}/ found in '{cur}' or any parent — run `heddle init` first")
+    raise HashloomError("no_project", f"no {HASHLOOM_DIR}/ found in '{cur}' or any parent — run `hashloom init` first")
 
 
 def db_path(root: Path) -> Path:
-    return root / HEDDLE_DIR / DB_NAME
+    return root / HASHLOOM_DIR / DB_NAME
 
 
 def contracts_dir(root: Path) -> Path:
@@ -54,7 +54,7 @@ def safe_contract_path(root: Path, name: str) -> Path:
     try:
         target.resolve().relative_to(cdir)
     except ValueError:
-        raise HeddleError("unsafe_name", f"contract name '{name}' resolves outside contracts/", contract=name)
+        raise HashloomError("unsafe_name", f"contract name '{name}' resolves outside contracts/", contract=name)
     return target
 
 
@@ -64,7 +64,7 @@ def case_collision(target: Path) -> str | None:
 
     Two names differing only in case (billing/Invoice vs billing/invoice) map to
     one file there; writing the second would silently clobber the first and split
-    the store from disk (then `heddle index` can't rebuild). put_contract refuses
+    the store from disk (then `hashloom index` can't rebuild). put_contract refuses
     it. On a case-sensitive filesystem the two are genuinely distinct files, so
     `samefile` is False and they coexist.
     """
@@ -82,9 +82,9 @@ def case_collision(target: Path) -> str | None:
 
 
 def init_project(root: Path) -> list[str]:
-    """Create .heddle/ and contracts/. Returns the paths created."""
+    """Create .hashloom/ and contracts/. Returns the paths created."""
     created = []
-    for d in (root / HEDDLE_DIR, contracts_dir(root)):
+    for d in (root / HASHLOOM_DIR, contracts_dir(root)):
         if not d.exists():
             d.mkdir(parents=True)
             created.append(str(d))
@@ -125,7 +125,7 @@ def _lock_key(name: str) -> str:
 def contract_lock(root: Path, name: str):
     """Serialise concurrent writers of the *same* contract name.
 
-    An exclusive posix advisory lock (`flock`) on `.heddle/locks/<name>.lock`, so
+    An exclusive posix advisory lock (`flock`) on `.hashloom/locks/<name>.lock`, so
     two agents calling `put_contract` on one name don't interleave their
     file-write + store-update and leave the file and store disagreeing. Where
     `fcntl` is unavailable (Windows) this is a no-op and callers fall back to
@@ -134,7 +134,7 @@ def contract_lock(root: Path, name: str):
     if fcntl is None:  # pragma: no cover - non-posix
         yield
         return
-    locks_dir = root / HEDDLE_DIR / LOCKS_DIR
+    locks_dir = root / HASHLOOM_DIR / LOCKS_DIR
     locks_dir.mkdir(parents=True, exist_ok=True)
     with open(locks_dir / f"{_lock_key(name)}.lock", "w") as lf:
         fcntl.flock(lf, fcntl.LOCK_EX)

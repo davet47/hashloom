@@ -1,4 +1,4 @@
-"""End-to-end: spawn `heddle serve` over stdio and exercise every tool the way
+"""End-to-end: spawn `hashloom serve` over stdio and exercise every tool the way
 an agent would."""
 
 import json
@@ -16,7 +16,7 @@ def call(project_root, requests):
     async def _run():
         params = StdioServerParameters(
             command=sys.executable,
-            args=["-m", "heddle.cli", "serve"],
+            args=["-m", "hashloom.cli", "serve"],
             cwd=str(project_root),
         )
         out = []

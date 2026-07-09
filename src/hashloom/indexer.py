@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 
 from .contract import contract_hash, parse_contract
-from .errors import HeddleError, unknown_name
+from .errors import HashloomError, unknown_name
 from .langs import adapter_for
 from .project import contracts_dir
 from .store import Store
@@ -21,7 +21,7 @@ def index(root: Path, store: Store) -> dict:
     """
     cdir = contracts_dir(root)
     if not cdir.is_dir():
-        raise HeddleError("no_contracts", f"'{cdir}' does not exist")
+        raise HashloomError("no_contracts", f"'{cdir}' does not exist")
 
     # recurse: a subdirectory is a namespace, so contracts/billing/invoice.yaml
     # is the contract `billing/invoice` (its name must match its path under cdir)
@@ -35,7 +35,7 @@ def index(root: Path, store: Store) -> dict:
         try:
             probe = yaml.safe_load(text)
         except yaml.YAMLError as e:
-            raise HeddleError("invalid_yaml", f"'{rel.as_posix()}' is not valid YAML: {e}")
+            raise HashloomError("invalid_yaml", f"'{rel.as_posix()}' is not valid YAML: {e}")
         if not (isinstance(probe, dict) and "name" in probe and "signature" in probe):
             # a contract self-identifies by its two required keys; other YAML under
             # contracts/ (mkdocs, CI, compose, data fixtures) is skipped, not fatal.
@@ -44,7 +44,7 @@ def index(root: Path, store: Store) -> dict:
         expect = rel.with_suffix("").as_posix()
         data = parse_contract(text, expect_name=expect)
         if data["name"] in parsed:
-            raise HeddleError(
+            raise HashloomError(
                 "duplicate_contract",
                 f"contract '{data['name']}' is defined by more than one file",
                 contract=data["name"],
@@ -70,7 +70,7 @@ def index(root: Path, store: Store) -> dict:
             adapter = adapter_for(data["impl"])
             try:
                 ihash = adapter.impl_hash(root, data["impl"], contract=name)
-            except HeddleError:
+            except HashloomError:
                 ihash = None  # missing impl shows up as dirty in status, not an index failure
             # store the impl file's source as a content-addressed blob so the store
             # can serve weft, not only verdicts; deduped across contracts sharing a file

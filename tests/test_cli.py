@@ -1,4 +1,4 @@
-"""`heddle verify` from the command line: same cached verification as the MCP
+"""`hashloom verify` from the command line: same cached verification as the MCP
 tool, with a process exit code so it gates CI / pre-commit."""
 
 from __future__ import annotations
@@ -7,8 +7,8 @@ import json
 
 import pytest
 
-from heddle import __version__
-from heddle.cli import main
+from hashloom import __version__
+from hashloom.cli import main
 
 
 def test_version_flag_prints_version_and_exits_zero(capsys):
@@ -66,7 +66,7 @@ def test_verify_cli_unknown_contract_errors_nonzero(project, monkeypatch, capsys
 
 
 def test_verify_cli_outside_project_errors(tmp_path, monkeypatch, capsys):
-    monkeypatch.chdir(tmp_path)  # no .heddle/ anywhere above
+    monkeypatch.chdir(tmp_path)  # no .hashloom/ anywhere above
     rc = main(["verify", "total"])
     err = json.loads(capsys.readouterr().err)
     assert rc == 1

@@ -1,8 +1,9 @@
-# Releasing heddle
+# Releasing hashloom
 
-heddle ships to PyPI as the distribution `heddle-mcp` (the bare `heddle` name is
-held by a third-party placeholder). The import name and CLI stay `heddle`, so
-users run `pip install heddle-mcp`, then `heddle serve` / `import heddle`.
+hashloom ships to PyPI as the bare distribution `hashloom` — name, import, and
+CLI all match: `pip install hashloom`, then `hashloom serve` / `import hashloom`.
+(Releases 0.1.0-0.3.3 shipped as `heddle-mcp`, before the rename; that project
+is frozen with a tombstone pointing here.)
 
 Releases publish automatically via GitHub Actions Trusted Publishing (OIDC, no
 stored token): pushing a `v*` tag runs `.github/workflows/release.yml`, which
@@ -13,12 +14,14 @@ updates the listing on registry.modelcontextprotocol.io. The build job fails
 fast if the tag and `__version__` disagree, since PyPI publishes `__version__`
 while the registry listing is stamped from the tag.
 
-0.1.0 shipped on 2026-06-23. The PyPI pending publisher is registered, so
-subsequent releases need only a version bump and a tag.
+The PyPI pending publisher for `hashloom` is bound to `davet47/hashloom` +
+`release.yml` + environment `pypi` (registered at the 0.4.0 rename; the old
+`heddle-mcp` publisher retired with its tombstone). Subsequent releases need
+only a version bump and a tag.
 
 ## Cut a release
 
-1. Bump `__version__` in `src/heddle/__init__.py` (the single source of truth;
+1. Bump `__version__` in `src/hashloom/__init__.py` (the single source of truth;
    the wheel version derives from it via hatchling). The tag only triggers the
    workflow, so the tag and `__version__` must match.
 2. Confirm green locally (CI runs both on the PR too):
@@ -32,19 +35,19 @@ subsequent releases need only a version bump and a tag.
    git switch main && git pull
    git tag vX.Y.Z && git push origin vX.Y.Z
    ```
-   That fires `release.yml`: the build job produces `dist/heddle_mcp-X.Y.Z*`,
+   That fires `release.yml`: the build job produces `dist/hashloom-X.Y.Z*`,
    the publish job uploads them over OIDC, and the mcp-registry job refreshes
    the MCP Registry listing. Watch the Actions tab.
 5. Verify it is live:
    ```bash
-   uvx --from heddle-mcp heddle --version   # -> heddle X.Y.Z
-   curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.davet47/heddle"   # listing shows X.Y.Z
+   uvx --from hashloom hashloom --version   # -> hashloom X.Y.Z
+   curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.davet47/hashloom"   # listing shows X.Y.Z
    ```
 
 ## Trusted Publishing setup (one-time, already done)
 
 Registered at pypi.org, Account settings, Publishing, "Add a pending publisher":
-project `heddle-mcp`, owner `davet47`, repo `heddle`, workflow `release.yml`,
+project `hashloom`, owner `davet47`, repo `hashloom`, workflow `release.yml`,
 environment `pypi`. The publish job declares `id-token: write` and
 `environment: pypi`, so PyPI mints a short-lived token for that exact run.
 

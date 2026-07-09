@@ -6,6 +6,29 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-09
+
+**Renamed: heddle → hashloom.** Two unrelated "heddle" MCP servers already
+existed (one predating this project by three months), and the bare PyPI name
+was squatted — the loom-part namespace turned out to be crowded ground. The
+coinage `hashloom` says what the tool is (a loom keyed by hashes), is
+unclaimed everywhere, and takes the *bare* PyPI name: `pip install hashloom`.
+
+### Changed
+- Distribution `heddle-mcp` → `hashloom`; import and CLI `heddle` → `hashloom`;
+  MCP registry id `io.github.davet47/heddle` → `io.github.davet47/hashloom`
+  (registry launches now use `uvx hashloom serve` via `packageArguments`);
+  error class `HeddleError` → `HashloomError`; cache-server token env var
+  `HEDDLE_CACHE_TOKEN` → `HASHLOOM_CACHE_TOKEN`; project marker directory
+  `.heddle/` → `.hashloom/`.
+- **Migration** (pre-0.4.0 projects): the store is derived — run
+  `hashloom init && hashloom index` in each project, move any
+  `.heddle/config.json` to `.hashloom/config.json` by hand, and delete the old
+  `.heddle/` directory. Contract files are untouched.
+- The roadmap's hosted-store theme renumbers v0.4 → v0.5 (this release took
+  the 0.4.0 slot).
+- The engine is otherwise unchanged; `heddle-mcp` 0.3.3 is the tombstone.
+
 ## [0.3.3] - 2026-07-09
 
 The tombstone release: **the project has been renamed to `hashloom`** (the
@@ -212,8 +235,11 @@ stay `heddle`).
 - CI (tests on Python 3.10 through 3.13 plus the >5x benchmark guard) and PyPI
   Trusted Publishing on version tags.
 
-[Unreleased]: https://github.com/davet47/heddle/compare/v0.3.1...HEAD
-[0.3.1]: https://github.com/davet47/heddle/compare/v0.3.0...v0.3.1
-[0.3.0]: https://github.com/davet47/heddle/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/davet47/heddle/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/davet47/heddle/releases/tag/v0.1.0
+[Unreleased]: https://github.com/davet47/hashloom/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/davet47/hashloom/compare/v0.3.3...v0.4.0
+[0.3.3]: https://github.com/davet47/hashloom/compare/v0.3.2...v0.3.3
+[0.3.2]: https://github.com/davet47/hashloom/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/davet47/hashloom/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/davet47/hashloom/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/davet47/hashloom/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/davet47/hashloom/releases/tag/v0.1.0

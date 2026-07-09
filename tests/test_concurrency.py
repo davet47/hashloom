@@ -11,10 +11,10 @@ import concurrent.futures
 
 import yaml
 
-from heddle import api
-from heddle.contract import contract_hash, parse_contract
-from heddle.project import db_path
-from heddle.store import SqliteStore
+from hashloom import api
+from hashloom.contract import contract_hash, parse_contract
+from hashloom.project import db_path
+from hashloom.store import SqliteStore
 
 
 def _contract(name: str, sig: str = "() -> None") -> str:

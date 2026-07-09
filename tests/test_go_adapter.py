@@ -9,12 +9,12 @@ from pathlib import Path
 
 import pytest
 
-from heddle import api
-from heddle.errors import HeddleError
-from heddle.indexer import index
-from heddle.langs import adapter_for
-from heddle.project import db_path, init_project
-from heddle.store import SqliteStore
+from hashloom import api
+from hashloom.errors import HashloomError
+from hashloom.indexer import index
+from hashloom.langs import adapter_for
+from hashloom.project import db_path, init_project
+from hashloom.store import SqliteStore
 
 pytestmark = pytest.mark.skipif(shutil.which("go") is None, reason="go toolchain not installed")
 
@@ -102,6 +102,6 @@ def test_go_build_error_is_a_runner_error(tmp_path):
 def test_go_impl_syntax_error(tmp_path):
     _go_project(tmp_path)
     (tmp_path / "calc" / "calc.go").write_text("package calc\n\nfunc Total( {\n")
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         adapter_for(_IMPL).impl_hash(tmp_path, _IMPL)
     assert e.value.code == "impl_syntax_error"

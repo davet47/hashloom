@@ -1,6 +1,6 @@
-# Working rules for heddle
+# Working rules for hashloom
 
-Heddle is a hash-keyed verification cache + content-addressed contract store,
+Hashloom is a hash-keyed verification cache + content-addressed contract store,
 exposed over MCP. Contracts are warp (durable), code is weft (regenerable). These
 rules override default behavior — follow them.
 
@@ -23,36 +23,36 @@ Anything not on the current milestone is an entry in [ISSUES.md](ISSUES.md) — 
 it there, don't write the code. The named failure mode is "scope creep toward
 Loom." Keep the surface minimal: **5 MCP tools, 5 CLI commands.** The README
 documents "the entire surface"; if a change would add to it, stop and confirm.
-(The shared-cache backend `python -m heddle.cache_server` is a deliberate
+(The shared-cache backend `python -m hashloom.cache_server` is a deliberate
 *operational* process, not a 6th CLI command — the client surface stays 5/5.)
 
-## Heddle develops on heddle
+## Hashloom develops on hashloom
 
-The repo is itself a heddle project: `contracts/` holds contracts for the
+The repo is itself a hashloom project: `contracts/` holds contracts for the
 stable seams (the five `api.py` functions, the `contract.py` hashing trio,
-`impl_hash`, `verification_key`, `HeddleError`, the `Store` Protocol). The
+`impl_hash`, `verification_key`, `HashloomError`, the `Store` Protocol). The
 workflow from [docs/getting-started.md](docs/getting-started.md) applies here:
 
-- **The heddle MCP server is project-configured** in [.mcp.json](.mcp.json)
-  (`uv run heddle serve`). When its tools are present, **prefer `get_contract`
+- **The hashloom MCP server is project-configured** in [.mcp.json](.mcp.json)
+  (`uv run hashloom serve`). When its tools are present, **prefer `get_contract`
   packets and `get_dependents` over reading a contracted seam's source file** —
   the ~300-token packet is the token-frugal path this project exists to prove;
   fall back to file reads only for uncontracted code.
 - **Before changing a contracted seam**, check the blast radius (the
   `get_dependents` MCP tool when connected — it is not a CLI command);
-  **after touching one**, `uv run heddle verify --radius <name>` must return
+  **after touching one**, `uv run hashloom verify --radius <name>` must return
   `ok: true` — that is the inner-loop gate.
 - **A new stable seam gets a contract before its implementation.** If you (the
   agent) derived the contract rather than the user specifying it, mark it
-  `status: inferred`; the user flips it to `confirmed` on review. `heddle
+  `status: inferred`; the user flips it to `confirmed` on review. `hashloom
   status` lists the review queue.
 - **Do not contract churning interiors.** `remote.py`, `cache_server.py`, and
   `shared.py` are deliberately uncontracted while the v0.3 hosted-store work
   reshapes them; helpers (`tokens.py`, `project.py`) are weft. Pinning
   interiors is the failure mode the README warns about.
-- **The heddle gate layers on the DoD — it never replaces it.** Full
+- **The hashloom gate layers on the DoD — it never replaces it.** Full
   `uv run pytest` and the benchmark below remain the definition of done;
-  heddle's cached verify must not be the only thing vouching for heddle.
+  hashloom's cached verify must not be the only thing vouching for hashloom.
 
 ## Definition of done: >5x token reduction
 
@@ -70,30 +70,30 @@ Run `uv run pytest` (full suite) before declaring anything done.
 
 ## The store is derived
 
-`.heddle/store.db` is rebuildable from `contracts/` via `heddle index` — never
+`.hashloom/store.db` is rebuildable from `contracts/` via `hashloom index` — never
 hand-edit it. `contracts/*.yaml` is the source of truth.
 
 ## Errors are structured
 
 Nothing leaks a stack trace over MCP. `_respond` in
-[server.py](src/heddle/server.py) wraps every tool; raise `HeddleError(code,
+[server.py](src/hashloom/server.py) wraps every tool; raise `HashloomError(code,
 message)` for anything an agent should see. Keep it that way.
 
 ## The verify interpreter
 
 `verify` shells pytest out to a resolved interpreter (see
-[config.py](src/heddle/config.py)), in precedence order:
+[config.py](src/hashloom/config.py)), in precedence order:
 
-1. `heddle serve --python PATH`
-2. `.heddle/config.json` → `{"python": "..."}`
+1. `hashloom serve --python PATH`
+2. `.hashloom/config.json` → `{"python": "..."}`
 3. auto-detected project venv (`<root>/.venv/bin/python`, …)
 4. `sys.executable`
 
-So heddle can verify a target project against *its own* venv without being
-installed into it. `heddle status` reports the resolved interpreter.
+So hashloom can verify a target project against *its own* venv without being
+installed into it. `hashloom status` reports the resolved interpreter.
 
 Non-Python impls resolve their own toolchain by the same precedence, keyed by the
-impl extension: a `.go` impl uses `go` (`.heddle/config.json` → `"go"`); a
+impl extension: a `.go` impl uses `go` (`.hashloom/config.json` → `"go"`); a
 `.ts`/`.tsx` impl uses `node` (→ `"node"`) plus the project's *own* `typescript`,
 and auto-detects the test runner (vitest / jest, else Node's `node:test`); a
 `.java` impl uses `java` (→ `"java"`, JDK >= 11) and auto-detects the runner from

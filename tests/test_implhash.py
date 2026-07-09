@@ -3,9 +3,9 @@ hash; logic changes must."""
 
 import pytest
 
-from heddle.errors import HeddleError
-from heddle import implhash  # test_source_hash via module: a bare `test_*` import would be collected as a test
-from heddle.implhash import impl_hash
+from hashloom.errors import HashloomError
+from hashloom import implhash  # test_source_hash via module: a bare `test_*` import would be collected as a test
+from hashloom.implhash import impl_hash
 
 BASE = '''
 def total(items):
@@ -71,20 +71,20 @@ def test_class_and_method_resolution(tmp_path):
 
 def test_missing_function_raises(tmp_path):
     (tmp_path / "mod.py").write_text("x = 1\n")
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         impl_hash(tmp_path, "mod.py::nope")
     assert exc.value.code == "impl_not_found"
 
 
 def test_missing_file_raises(tmp_path):
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         impl_hash(tmp_path, "absent.py::f")
     assert exc.value.code == "impl_not_found"
 
 
 def test_syntax_error_raises(tmp_path):
     (tmp_path / "mod.py").write_text("def broken(:\n")
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         impl_hash(tmp_path, "mod.py::broken")
     assert exc.value.code == "impl_syntax_error"
 

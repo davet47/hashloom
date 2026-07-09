@@ -2,7 +2,7 @@
 //
 // Usage: node main.js <file.ts> <qualname> <projectRoot>
 //
-// This is the TypeScript analogue of heddle's gohash (Go) and ast.dump (Python).
+// This is the TypeScript analogue of hashloom's gohash (Go) and ast.dump (Python).
 // TypeScript has no built-in AST serializer, so we hand-write a canonical walk
 // over the Compiler API's AST: emit each node's SyntaxKind name plus the text of
 // identifiers/literals, recurse into children in source order, and DROP what is
@@ -12,7 +12,7 @@
 //
 // `typescript` itself is resolved from the TARGET project's node_modules: the
 // project's own compiler version is part of what we hash, mirroring how the Go
-// adapter runs the target's own toolchain (GOTOOLCHAIN=local) and how heddle
+// adapter runs the target's own toolchain (GOTOOLCHAIN=local) and how hashloom
 // verifies Python against the target's own venv.
 //
 // One line on stdout, exit 0 always (so a thrown error never collapses to a

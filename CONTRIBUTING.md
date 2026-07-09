@@ -1,12 +1,12 @@
-# Contributing to heddle
+# Contributing to hashloom
 
-Thanks for your interest. heddle is a hash-keyed verification cache and a
+Thanks for your interest. hashloom is a hash-keyed verification cache and a
 content-addressed contract store, exposed over MCP. Contracts are the durable
 warp; code is the regenerable weft. A few rules keep it that way.
 
 ## Scope: the surface is fixed on purpose
 
-heddle is deliberately small: **5 MCP tools and 5 CLI commands**, and the README
+hashloom is deliberately small: **5 MCP tools and 5 CLI commands**, and the README
 documents the entire surface. The named failure mode is "scope creep toward
 Loom." Bug fixes and docs are welcome any time. A change that would add to that
 surface needs a conversation first, so please open an issue before writing it.
@@ -33,8 +33,8 @@ uv run python bench/benchmark.py    # the definition-of-done number
    context packets or hashing, and never regress it.
 
 Two more invariants worth knowing: nothing leaks a stack trace over MCP (tool
-errors are structured `HeddleError(code, message)` values, see `server.py`), and
-`.heddle/store.db` is derived state rebuildable from `contracts/` via `heddle
+errors are structured `HashloomError(code, message)` values, see `server.py`), and
+`.hashloom/store.db` is derived state rebuildable from `contracts/` via `hashloom
 index`, so never hand-edit it. `contracts/*.yaml` is the source of truth.
 
 ## Pull requests

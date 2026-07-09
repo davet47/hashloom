@@ -9,13 +9,13 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-from heddle import api
-from heddle.indexer import index
-from heddle.langs import adapter_for
-from heddle.langs.python import PythonAdapter
-from heddle.project import db_path, init_project
-from heddle.store import SqliteStore
-from heddle.verify import verification_key
+from hashloom import api
+from hashloom.indexer import index
+from hashloom.langs import adapter_for
+from hashloom.langs.python import PythonAdapter
+from hashloom.project import db_path, init_project
+from hashloom.store import SqliteStore
+from hashloom.verify import verification_key
 
 
 def _project(root: Path) -> None:

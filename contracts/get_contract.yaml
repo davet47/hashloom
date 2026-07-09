@@ -1,6 +1,6 @@
 name: get_contract
 signature: "(root: Path, store: Store, name: str) -> dict"
-deps: [Store, HeddleError]
+deps: [Store, HashloomError]
 invariants:
   - the ~300-token context packet — contract body, 12-char hash, one-line dep signatures, caller list
   - inferred deps carry an advisory inferred flag; confirmed ones carry no extra key
@@ -9,5 +9,5 @@ tests:
   - tests/test_store_and_api.py::test_get_contract_packet
   - tests/test_store_and_api.py::test_get_contract_unknown_suggests_nearest
   - tests/test_store_and_api.py::test_get_contract_carries_status_and_flags_inferred_deps
-impl: src/heddle/api.py::get_contract
+impl: src/hashloom/api.py::get_contract
 status: confirmed

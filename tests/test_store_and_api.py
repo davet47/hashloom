@@ -2,9 +2,9 @@
 
 import pytest
 
-from heddle import api
-from heddle.errors import HeddleError
-from heddle.indexer import index
+from hashloom import api
+from hashloom.errors import HashloomError
+from hashloom.indexer import index
 
 from .conftest import write_contract
 
@@ -24,7 +24,7 @@ def test_index_rejects_unknown_dep(project):
         signature: "() -> None"
         deps: [Itme]
     """)
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         index(root, store)
     assert exc.value.code == "unknown_dep"
     # the 3am error: a nearest-match hint, not a KeyError
@@ -53,7 +53,7 @@ def test_get_contract_packet(project):
 
 def test_get_contract_unknown_suggests_nearest(project):
     root, store = project
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         api.get_contract(root, store, "reprot")
     assert exc.value.code == "unknown_contract"
     assert "report" in exc.value.message
@@ -90,7 +90,7 @@ def test_put_contract_unchanged_content_invalidates_nothing(project):
 
 def test_put_contract_rejects_unknown_dep(project):
     root, store = project
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         api.put_contract(root, store, "thing", 'name: thing\nsignature: "() -> None"\ndeps: [Itme]\n')
     assert exc.value.code == "unknown_dep"
     assert "Item" in exc.value.message
@@ -98,7 +98,7 @@ def test_put_contract_rejects_unknown_dep(project):
 
 def test_put_contract_rejects_self_dep(project):
     root, store = project
-    with pytest.raises(HeddleError) as exc:
+    with pytest.raises(HashloomError) as exc:
         api.put_contract(root, store, "loop", 'name: loop\nsignature: "() -> None"\ndeps: [loop]\n')
     assert exc.value.code == "invalid_shape"
 
@@ -113,7 +113,7 @@ def test_contract_removal_reindexes(project):
 
 def test_status_caches_impl_hashes(project, monkeypatch):
     root, store = project
-    from heddle import implhash
+    from hashloom import implhash
 
     calls = {"n": 0}
     real = implhash.impl_hash
@@ -156,8 +156,8 @@ def test_index_populates_impl_blobs(project):
 
 
 def test_put_blob_is_content_addressed_and_round_trips(tmp_path):
-    from heddle.project import db_path, init_project
-    from heddle.store import SqliteStore
+    from hashloom.project import db_path, init_project
+    from hashloom.store import SqliteStore
 
     init_project(tmp_path)
     store = SqliteStore(db_path(tmp_path))

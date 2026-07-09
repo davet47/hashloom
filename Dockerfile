@@ -4,5 +4,5 @@
 FROM python:3.13-slim
 WORKDIR /app
 COPY . /src
-RUN pip install --no-cache-dir /src && heddle init
-ENTRYPOINT ["heddle-mcp"]
+RUN pip install --no-cache-dir /src && hashloom init
+ENTRYPOINT ["hashloom-mcp"]

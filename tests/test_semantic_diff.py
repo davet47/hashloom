@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import textwrap
 
-from heddle import api
-from heddle.contract import diff_contracts
+from hashloom import api
+from hashloom.contract import diff_contracts
 
 
 def _c(**kw) -> dict:

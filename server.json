@@ -1,10 +1,10 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.davet47/heddle",
-  "title": "Heddle",
+  "name": "io.github.davet47/hashloom",
+  "title": "Hashloom",
   "description": "Content-addressed contracts and a verification cache that cut agent context by skipping proven code.",
   "repository": {
-    "url": "https://github.com/davet47/heddle",
+    "url": "https://github.com/davet47/hashloom",
     "source": "github"
   },
   "version": "0.3.1",
@@ -12,9 +12,15 @@
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
-      "identifier": "heddle-mcp",
+      "identifier": "hashloom",
       "version": "0.3.1",
       "runtimeHint": "uvx",
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "serve"
+        }
+      ],
       "transport": {
         "type": "stdio"
       }

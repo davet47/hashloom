@@ -14,7 +14,7 @@ from mcp.server.fastmcp import FastMCP
 
 from . import api, tokens
 from .config import resolve_pycache_trust, resolve_timeout
-from .errors import HeddleError
+from .errors import HashloomError
 from .project import find_root
 from .remote import build_store
 
@@ -28,15 +28,15 @@ def build_server(
     # project can mix Python and Go contracts
     timeout = resolve_timeout(root)
     trust = resolve_pycache_trust(root, override=pycache_trust)
-    mcp = FastMCP("heddle")
+    mcp = FastMCP("hashloom")
 
     def _respond(tool: str, fn) -> dict:
         try:
             result = fn()
-        except HeddleError as e:
+        except HashloomError as e:
             result = e.to_dict()
         except Exception as e:  # never leak a stack trace to the agent
-            result = HeddleError("internal", f"{type(e).__name__}: {e}").to_dict()
+            result = HashloomError("internal", f"{type(e).__name__}: {e}").to_dict()
         n = tokens.count(json.dumps(result, ensure_ascii=False))
         store.incr(f"tokens.{tool}", n)
         return result

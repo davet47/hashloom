@@ -1,6 +1,6 @@
 name: impl_hash
 signature: "(root: Path, impl: str, contract: str | None = None) -> str"
-deps: [HeddleError]
+deps: [HashloomError]
 invariants:
   - sha256 over the normalised AST of the named def — formatting, comments, and docstrings never change it
   - logic changes must change it
@@ -14,5 +14,5 @@ tests:
   - tests/test_implhash.py::test_logic_change_changes_hash
   - tests/test_implhash.py::test_class_and_method_resolution
   - tests/test_implhash.py::test_missing_function_raises
-impl: src/heddle/implhash.py::impl_hash
+impl: src/hashloom/implhash.py::impl_hash
 status: confirmed

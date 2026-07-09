@@ -7,11 +7,11 @@ here shells out.
 
 from __future__ import annotations
 
-from heddle.langs import SUMMARY_MAX_TOKENS, adapter_for
-from heddle.langs.go import GoAdapter
-from heddle.langs.java import JavaAdapter
-from heddle.langs.python import PythonAdapter
-from heddle.langs.typescript import TypeScriptAdapter
+from hashloom.langs import SUMMARY_MAX_TOKENS, adapter_for
+from hashloom.langs.go import GoAdapter
+from hashloom.langs.java import JavaAdapter
+from hashloom.langs.python import PythonAdapter
+from hashloom.langs.typescript import TypeScriptAdapter
 
 _SEAM = [
     "impl_hash",

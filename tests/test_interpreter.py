@@ -10,13 +10,13 @@ from pathlib import Path
 
 import pytest
 
-from heddle import api
-from heddle.config import DEFAULT_TIMEOUT, config_path, load_config, resolve_python, resolve_timeout
-from heddle.errors import HeddleError
+from hashloom import api
+from hashloom.config import DEFAULT_TIMEOUT, config_path, load_config, resolve_python, resolve_timeout
+from hashloom.errors import HashloomError
 
 
 def write_config(root: Path, obj) -> None:
-    cfg = root / ".heddle"
+    cfg = root / ".hashloom"
     cfg.mkdir(parents=True, exist_ok=True)
     config_path(root).write_text(json.dumps(obj), encoding="utf-8")
 
@@ -63,29 +63,29 @@ def test_override_beats_config(tmp_path):
 
 
 def test_malformed_config_raises_bad_config(tmp_path):
-    (tmp_path / ".heddle").mkdir()
+    (tmp_path / ".hashloom").mkdir()
     config_path(tmp_path).write_text("{not json", encoding="utf-8")
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         resolve_python(tmp_path)
     assert e.value.code == "bad_config"
 
 
 def test_non_object_config_raises_bad_config(tmp_path):
     write_config(tmp_path, ["not", "an", "object"])
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         load_config(tmp_path)
     assert e.value.code == "bad_config"
 
 
 def test_explicit_missing_interpreter_raises_bad_python(tmp_path):
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         resolve_python(tmp_path, override="/no/such/python")
     assert e.value.code == "bad_python"
 
 
 def test_config_missing_interpreter_raises_bad_python(tmp_path):
     write_config(tmp_path, {"python": "/no/such/python"})
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         resolve_python(tmp_path)
     assert e.value.code == "bad_python"
 
@@ -109,7 +109,7 @@ def test_timeout_from_config(tmp_path):
 @pytest.mark.parametrize("bad", [0, -5, "30", True])
 def test_bad_timeout_raises_bad_config(tmp_path, bad):
     write_config(tmp_path, {"verify_timeout": bad})
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         resolve_timeout(tmp_path)
     assert e.value.code == "bad_config"
 

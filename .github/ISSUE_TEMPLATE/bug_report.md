@@ -14,10 +14,10 @@ labels: bug
 <!-- Minimal steps. A small contract YAML plus the command or MCP call is ideal. -->
 
 **Environment**
-- heddle-mcp version (`heddle --version`):
+- hashloom version (`hashloom --version`):
 - Python version:
 - OS:
 
 **Anything else**
 <!-- status / verify output, the structured error code and message if there is
-one (heddle never leaks a stack trace over MCP). -->
+one (hashloom never leaks a stack trace over MCP). -->

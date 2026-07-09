@@ -1,7 +1,7 @@
 """The five tool implementations, as plain functions over (root, store).
 
 server.py exposes these over MCP; the CLI and benchmark call them directly.
-Every function either returns a JSON-able dict or raises HeddleError.
+Every function either returns a JSON-able dict or raises HashloomError.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import yaml
 
 from .config import resolve_python
 from .contract import contract_hash, diff_contracts, parse_contract
-from .errors import HeddleError, unknown_name
+from .errors import HashloomError, unknown_name
 from .langs import adapter_for
 from .project import atomic_write_text, case_collision, contract_lock, safe_contract_path
 from .store import Store
@@ -69,7 +69,7 @@ def put_contract(root: Path, store: Store, name: str, yaml_text: str) -> dict:
     known = set(store.contract_names()) | {name}
     for dep in data.get("deps", []):
         if dep == name:
-            raise HeddleError("invalid_shape", f"'{name}' cannot depend on itself", contract=name)
+            raise HashloomError("invalid_shape", f"'{name}' cannot depend on itself", contract=name)
         if dep not in known:
             raise unknown_name("unknown_dep", dep, sorted(known - {name}), contract=name)
 
@@ -77,7 +77,7 @@ def put_contract(root: Path, store: Store, name: str, yaml_text: str) -> dict:
     target = safe_contract_path(root, name)  # also refuses a name that escapes contracts/
     collision = case_collision(target)
     if collision is not None:
-        raise HeddleError(
+        raise HashloomError(
             "name_collision",
             f"'{name}' collides with existing contract file '{collision}' on a case-insensitive filesystem",
             contract=name,
@@ -98,7 +98,7 @@ def put_contract(root: Path, store: Store, name: str, yaml_text: str) -> dict:
             adapter = adapter_for(data["impl"])
             try:
                 ihash = adapter.impl_hash(root, data["impl"], contract=name)
-            except HeddleError:
+            except HashloomError:
                 ihash = None
             store.upsert_impl(name, ihash, data["impl"].partition("::")[0])
 
@@ -188,7 +188,7 @@ def verify(
             if inferred:
                 r["inferred"] = inferred
             results.append(r)
-        except HeddleError as e:
+        except HashloomError as e:
             results.append({"name": name, "status": "error", **e.to_dict()})
     # the gate bit: true iff every unit is green (vacuously true for an empty
     # radius — nothing invalidated means nothing to block on)
@@ -231,14 +231,14 @@ def status(root: Path, store: Store) -> dict:
             continue  # spec-only contracts don't need verification
         try:
             ihash = cached_impl_hash(root, store, data["impl"], contract=name)
-        except HeddleError:
+        except HashloomError:
             dirty.append(name)
             continue
         adapter = adapter_for(data["impl"])
         thash = adapter.test_source_hash(root, data.get("tests", []))
         try:
             tid = adapter.toolchain_identity(root)  # same key component verify stored
-        except HeddleError:
+        except HashloomError:
             dirty.append(name)  # can't resolve the toolchain -> can't claim a green
             continue
         v = store.get_verification(verification_key(store, name, ihash, thash, tid))

@@ -2,7 +2,7 @@
 
 `LayeredStore` (shared.py) only ever calls four methods on its shared store --
 `get_verification`, `record_verification`, `get_blob`, `put_blob` -- so a remote
-backend need implement only those (plus `close`). This client talks to a heddle
+backend need implement only those (plus `close`). This client talks to a hashloom
 `cache_server` over a tiny JSON HTTP API with a bearer token, using the stdlib
 only.
 
@@ -93,8 +93,8 @@ def _read_json(raw: bytes) -> dict | None:
 
 def build_store(root: Path) -> Store:
     """The local store, wrapped in a `LayeredStore` over a remote shared store
-    when `.heddle/config.json` configures one. The single wrap point shared by
-    `heddle serve` and the CLI -- keeps the 5-tool / 5-CLI surface unchanged."""
+    when `.hashloom/config.json` configures one. The single wrap point shared by
+    `hashloom serve` and the CLI -- keeps the 5-tool / 5-CLI surface unchanged."""
     local = SqliteStore(db_path(root))
     cfg = resolve_shared_store(root)
     if cfg is None:

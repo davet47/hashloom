@@ -6,7 +6,7 @@ the thin MVP that ships now.
 
 ## The seam
 
-`Store` is a Protocol (see `src/heddle/store.py`), so the cache backend is
+`Store` is a Protocol (see `src/hashloom/store.py`), so the cache backend is
 swappable. Two kinds of state are team-portable:
 
 - **verification verdicts** (the `verifications` rows), and
@@ -17,7 +17,7 @@ Everything else (a developer's contracts, edges, impls, counters) stays local.
 
 ## What ships now: `LayeredStore` (MVP)
 
-`src/heddle/shared.py` fronts a local `Store` with a shared one:
+`src/hashloom/shared.py` fronts a local `Store` with a shared one:
 
 - **read-through**: a local verdict miss consults the shared store; a green,
   non-stale row is back-filled locally and served. Blobs read local then shared.
@@ -37,8 +37,8 @@ change), and the shared store is local-file only. Wiring is below.
 1. ✓ **Transport + backend (shipped).** `RemoteStore` (`remote.py`) implements the
    four team-portable methods (get/record a verdict, get/put a blob) against a
    server over a tiny JSON HTTP API; the server is `cache_server.py`, a stdlib
-   `http.server` wrapping a `SqliteStore`, run as `python -m heddle.cache_server`.
-   Selected via `.heddle/config.json` `{"shared": {"url","token"}}` and wrapped in
+   `http.server` wrapping a `SqliteStore`, run as `python -m hashloom.cache_server`.
+   Selected via `.hashloom/config.json` `{"shared": {"url","token"}}` and wrapped in
    at one `build_store()` factory, so the 5-tool / 5-CLI surface does not grow. A
    shared-store outage degrades silently to local verify (the local path stays the
    default). Single-threaded for now; concurrency stays in #4. Server-side `ran_at`
@@ -67,21 +67,21 @@ change), and the shared store is local-file only. Wiring is below.
 
 ## Running the cache server
 
-The shared backend is an operational process, **not** a `heddle` subcommand (the
+The shared backend is an operational process, **not** a `hashloom` subcommand (the
 5-CLI surface is fixed):
 
 ```bash
-python -m heddle.cache_server --db cache.db --token SECRET   # --host/--port optional
+python -m hashloom.cache_server --db cache.db --token SECRET   # --host/--port optional
 ```
 
-It refuses to start without a token (`--token` or `HEDDLE_CACHE_TOKEN`) and binds
-`127.0.0.1` by default. Point each developer's `.heddle/config.json` at it:
+It refuses to start without a token (`--token` or `HASHLOOM_CACHE_TOKEN`) and binds
+`127.0.0.1` by default. Point each developer's `.hashloom/config.json` at it:
 
 ```json
 { "shared": { "url": "http://cache.host:8770", "token": "SECRET" } }
 ```
 
-Then `heddle verify` (and the MCP `verify` tool) publish greens to, and read them
+Then `hashloom verify` (and the MCP `verify` tool) publish greens to, and read them
 from, the shared cache transparently — no surface change, and if the server is
 down, verify just runs locally.
 

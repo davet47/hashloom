@@ -11,5 +11,5 @@ tests:
   - tests/test_semantic_diff.py::test_impl_and_tests_reported_though_excluded_from_hash
   - tests/test_semantic_diff.py::test_status_flip_reported_though_excluded_from_hash
   - tests/test_semantic_diff.py::test_cosmetic_only_edit_is_empty
-impl: src/heddle/contract.py::diff_contracts
+impl: src/hashloom/contract.py::diff_contracts
 status: confirmed

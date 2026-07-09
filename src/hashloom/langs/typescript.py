@@ -10,7 +10,7 @@ take.
 
 The test runner is auto-detected from the project's ``package.json``: a ``vitest``
 or ``jest`` dependency routes to that runner (both emit a jest-shaped JSON
-report); otherwise heddle falls back to Node's built-in ``node:test`` (TAP), which
+report); otherwise hashloom falls back to Node's built-in ``node:test`` (TAP), which
 needs no dependency at all. The runner backends are isolated below so a project's
 real runner is what verifies it.
 """
@@ -26,7 +26,7 @@ from pathlib import Path
 
 from .. import tokens
 from ..config import load_config
-from ..errors import HeddleError
+from ..errors import HashloomError
 from . import SUMMARY_MAX_TOKENS
 
 _TSHASH = Path(__file__).parent / "tshash" / "main.js"
@@ -53,14 +53,14 @@ class TypeScriptAdapter:
             return self._node_cache[key]
         cand = override or load_config(root).get("node") or shutil.which("node")
         if not cand:
-            raise HeddleError(
+            raise HashloomError(
                 "bad_toolchain",
-                "no Node.js toolchain found (install node, or set 'node' in .heddle/config.json)",
+                "no Node.js toolchain found (install node, or set 'node' in .hashloom/config.json)",
             )
         try:
             subprocess.run([cand, "--version"], capture_output=True, check=True, timeout=30)
         except (OSError, subprocess.SubprocessError):
-            raise HeddleError("bad_toolchain", f"'{cand}' is not a working Node.js toolchain")
+            raise HashloomError("bad_toolchain", f"'{cand}' is not a working Node.js toolchain")
         self._node_cache[key] = cand
         return cand
 
@@ -79,7 +79,7 @@ class TypeScriptAdapter:
                 cwd=root, capture_output=True, text=True, check=True, timeout=30,
             ).stdout.strip()
         except (OSError, subprocess.SubprocessError):
-            raise HeddleError("bad_toolchain", f"could not read node/typescript versions via '{node}'")
+            raise HashloomError("bad_toolchain", f"could not read node/typescript versions via '{node}'")
         ident = f"node {nv} ts {tv}"
         self._id_cache[key] = ident
         return ident
@@ -100,13 +100,13 @@ class TypeScriptAdapter:
         if kind == "hash":
             return rest
         if kind == "not_found":
-            raise HeddleError("impl_not_found", rest, contract=contract)
+            raise HashloomError("impl_not_found", rest, contract=contract)
         if kind == "syntax":
-            raise HeddleError("impl_syntax_error", rest, contract=contract)
+            raise HashloomError("impl_syntax_error", rest, contract=contract)
         if kind == "notoolchain":
-            raise HeddleError("bad_toolchain", rest, contract=contract)
+            raise HashloomError("bad_toolchain", rest, contract=contract)
         # the helper itself could not run (node missing, helper error, ...)
-        raise HeddleError(
+        raise HashloomError(
             "tests_failed_to_run",
             tokens.truncate("ts ast helper failed: " + _oneline(proc.stderr or proc.stdout), 60),
         )
@@ -119,7 +119,7 @@ class TypeScriptAdapter:
             if path_str and test:
                 try:
                     h = self._hash_def(root, path_str, test)
-                except (HeddleError, OSError, ValueError, subprocess.SubprocessError):
+                except (HashloomError, OSError, ValueError, subprocess.SubprocessError):
                     h = None
             parts.append(f"{nid}={h or 'id'}")
         return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
@@ -199,7 +199,7 @@ class TypeScriptAdapter:
             return (False, tokens.truncate(f"{name}: {detail}", SUMMARY_MAX_TOKENS))
         if not ran:
             # no requested test produced a result: a load/parse/import error
-            raise HeddleError(
+            raise HashloomError(
                 "tests_failed_to_run",
                 tokens.truncate(
                     "node --test could not run: " + _oneline(proc.stderr or proc.stdout), 60
@@ -239,7 +239,7 @@ class TypeScriptAdapter:
 
         report = self._extract_json(proc.stdout)
         if report is None:
-            raise HeddleError(
+            raise HashloomError(
                 "tests_failed_to_run",
                 tokens.truncate(
                     f"{runner} could not run: " + _oneline(proc.stderr or proc.stdout), 60

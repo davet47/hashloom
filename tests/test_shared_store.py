@@ -6,11 +6,11 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-from heddle import api
-from heddle.indexer import index
-from heddle.project import init_project
-from heddle.shared import LayeredStore
-from heddle.store import SqliteStore
+from hashloom import api
+from hashloom.indexer import index
+from hashloom.project import init_project
+from hashloom.shared import LayeredStore
+from hashloom.store import SqliteStore
 
 
 def _make_project(root: Path) -> None:
@@ -38,7 +38,7 @@ def test_shared_green_is_served_to_a_second_client(tmp_path):
     shared = SqliteStore(tmp_path / "shared.db")
 
     # client A: local + shared. verify runs pytest once and publishes the green.
-    a_local = SqliteStore(root / ".heddle" / "a.db")
+    a_local = SqliteStore(root / ".hashloom" / "a.db")
     a = LayeredStore(a_local, shared)
     index(root, a)
     assert api.verify(root, a, ["total"])["results"][0]["status"] == "pass"
@@ -49,7 +49,7 @@ def test_shared_green_is_served_to_a_second_client(tmp_path):
     assert shared.get_blob(blob_hash) is not None
 
     # client B: fresh local, same shared. the green is served WITHOUT pytest.
-    b_local = SqliteStore(root / ".heddle" / "b.db")
+    b_local = SqliteStore(root / ".hashloom" / "b.db")
     b = LayeredStore(b_local, shared)
     index(root, b)
     assert api.verify(root, b, ["total"])["results"][0]["status"] == "cached-pass"
@@ -67,12 +67,12 @@ def test_failures_are_not_published_to_the_shared_store(tmp_path):
     # break the impl so the test fails
     (root / "src" / "x.py").write_text("def total(xs):\n    return 0\n")
     shared = SqliteStore(tmp_path / "shared.db")
-    a = LayeredStore(SqliteStore(root / ".heddle" / "a.db"), shared)
+    a = LayeredStore(SqliteStore(root / ".hashloom" / "a.db"), shared)
     index(root, a)
     assert api.verify(root, a, ["total"])["results"][0]["status"] == "fail"
 
     # a second client must NOT see a cached pass; failures never cross the boundary
-    b_local = SqliteStore(root / ".heddle" / "b.db")
+    b_local = SqliteStore(root / ".hashloom" / "b.db")
     b = LayeredStore(b_local, shared)
     index(root, b)
     assert api.verify(root, b, ["total"])["results"][0]["status"] == "fail"  # re-runs, no shared green

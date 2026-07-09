@@ -7,7 +7,7 @@ Getters return plain dicts, not `sqlite3.Row`, so the interface carries nothing
 SQLite-specific.
 
 The store is derived state — deletable and rebuildable from contracts/ at any
-time via `heddle index`.
+time via `hashloom index`.
 """
 
 from __future__ import annotations
@@ -107,7 +107,7 @@ class SqliteStore:
 
     def _migrate(self) -> None:
         # the store is derived, but add new columns in place so an existing
-        # store.db from an older heddle keeps working without a manual rebuild
+        # store.db from an older hashloom keeps working without a manual rebuild
         cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(impls)")}
         if "blob_hash" not in cols:
             self._conn.execute("ALTER TABLE impls ADD COLUMN blob_hash TEXT")

@@ -2,11 +2,11 @@
 
 **Shipped so far** (full detail in the [CHANGELOG](CHANGELOG.md)):
 
-- **v0.1** (0.1.0 → PyPI as `heddle-mcp`, 2026-06-23) — the engine:
+- **v0.1** (0.1.0 → PyPI as `hashloom`, 2026-06-23) — the engine:
   content-addressed contracts, a hash-keyed verification cache, and a
   blast-radius query, over MCP. Single-process and Python-only by design.
 - **v0.2** (0.2.0 → PyPI, 2026-07-04) — solo → team: a shared verification
-  cache (`LayeredStore` + `RemoteStore` + `python -m heddle.cache_server`) with
+  cache (`LayeredStore` + `RemoteStore` + `python -m hashloom.cache_server`) with
   the toolchain folded into the verification key so cross-machine greens are
   sound; **Go** and **TypeScript** adapters behind the per-extension adapter
   seam; semantic diff in `put_contract`; test source in the key (#18);
@@ -17,17 +17,17 @@
 - **v0.3** (0.3.0 → PyPI, 2026-07-04) — adoption: the
   [getting-started walkthrough](docs/getting-started.md) for the
   contract-first agent workflow; sample projects in all three languages
-  (`examples/sales`, `examples/go-ledger`, `examples/ts-cart`); and heddle
-  developing heddle — the repo's own stable seams under contract, reviewed and
+  (`examples/sales`, `examples/go-ledger`, `examples/ts-cart`); and hashloom
+  developing hashloom — the repo's own stable seams under contract, reviewed and
   confirmed. No engine changes.
 
 What follows is where it goes next. The deferred-by-design items live in
-[ISSUES.md](ISSUES.md) and the [issue tracker](https://github.com/davet47/heddle/issues);
+[ISSUES.md](ISSUES.md) and the [issue tracker](https://github.com/davet47/hashloom/issues);
 this is the prioritization.
 
-## Theme for v0.4: shared → hosted
+## Theme for v0.5: shared → hosted
 
-v0.2 made the cache shareable; v0.4 makes sharing it safe at team scale. The
+v0.2 made the cache shareable; v0.5 makes sharing it safe at team scale. The
 remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
 
 - **Auth scoping** — split publish from read: CI can write greens, a laptop can
@@ -50,22 +50,22 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
   only those does not force a re-run yet. The README documents this caveat;
   closing it is the next precision/soundness item.
 - **Facet-aware invalidation**
-  ([#67](https://github.com/davet47/heddle/issues/67)) —
+  ([#67](https://github.com/davet47/hashloom/issues/67)) —
   `put_contract`'s semantic diff already reports
   *which* facet of a contract changed (signature / deps / examples /
   invariants), but invalidation ignores that precision: any hash-relevant
   change marks every transitive dependent stale. The sharpening is letting a
-  dependent declare — or heddle infer — which facets it actually leans on, so
+  dependent declare — or hashloom infer — which facets it actually leans on, so
   an examples-only change doesn't re-verify a dependent that only consumes the
   signature. Pure precision work inside the existing model — no new surface
   (5 MCP tools, 5 CLI commands unchanged). Unscheduled: it queues behind
-  fixture coverage (the #18 follow-up above) and the v0.4 hosted-store theme.
+  fixture coverage (the #18 follow-up above) and the v0.5 hosted-store theme.
 - **The deterministic-test caveat** — a cached green assumes deterministic
   tests, so a pass that depended on wall-clock time, network, or randomness can
   outlive the condition that made it pass. The README states the caveat
   honestly; shrinking it (flakiness detection, an optional re-verify TTL, or
   marking tests untrusted-for-caching) is open design work, not yet scheduled.
-- **Strict provenance mode** ([#49](https://github.com/davet47/heddle/issues/49))
+- **Strict provenance mode** ([#49](https://github.com/davet47/hashloom/issues/49))
   — an opt-in config that upgrades inferred-contract warnings to structured
   refusals, for teams that want unvetted contracts to hard-fail. Deferred by
   design; layerable with no schema change.
@@ -93,7 +93,7 @@ project avoids "scope creep toward Loom." Keep the surface minimal: 5 MCP tools,
 
 ## Suggested sequencing
 
-1. **Hosted-store hardening** (the v0.4 theme): auth scoping, concurrent
+1. **Hosted-store hardening** (the v0.5 theme): auth scoping, concurrent
    writers, cross-graph invalidation — then the dependency set in the key.
 2. **Fixture coverage** in the test-source hash, and strict provenance mode
    (#49) if demand shows up.

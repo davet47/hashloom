@@ -1,15 +1,15 @@
-"""The heddle shared verification-cache server.
+"""The hashloom shared verification-cache server.
 
 A minimal stdlib HTTP server wrapping one `SqliteStore`, exposing exactly the four
 team-portable Store operations `LayeredStore` needs -- get/record a verdict,
 get/put a blob -- as a tiny JSON API behind a bearer token. A team points each
-developer's `.heddle/config.json` `{"shared": {...}}` at one of these, so a unit
+developer's `.hashloom/config.json` `{"shared": {...}}` at one of these, so a unit
 verified green once is served to everyone (see docs/hosted-store.md).
 
-It is intentionally NOT a `heddle` subcommand (the 5-CLI surface is fixed); run it
+It is intentionally NOT a `hashloom` subcommand (the 5-CLI surface is fixed); run it
 as a separate operational process:
 
-    python -m heddle.cache_server --db cache.db --token SECRET [--host H --port P]
+    python -m hashloom.cache_server --db cache.db --token SECRET [--host H --port P]
 
 Single-threaded by design: a `SqliteStore` holds one sqlite connection (not
 thread-safe), and the verdict/blob writes are idempotent upserts, so
@@ -43,7 +43,7 @@ class CacheServer(HTTPServer):
 
 
 class _Handler(BaseHTTPRequestHandler):
-    server_version = "heddle-cache/1"
+    server_version = "hashloom-cache/1"
 
     # -- helpers ------------------------------------------------------------
 
@@ -120,7 +120,7 @@ class _Handler(BaseHTTPRequestHandler):
 def serve(db: str, token: str, host: str = "127.0.0.1", port: int = DEFAULT_PORT) -> None:
     store = SqliteStore(db, check_same_thread=False)  # used on the serve_forever thread
     httpd = CacheServer((host, port), store, token)
-    print(f"heddle cache server on http://{host}:{httpd.server_address[1]}  (db: {db})", file=sys.stderr)
+    print(f"hashloom cache server on http://{host}:{httpd.server_address[1]}  (db: {db})", file=sys.stderr)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -132,20 +132,20 @@ def serve(db: str, token: str, host: str = "127.0.0.1", port: int = DEFAULT_PORT
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        prog="python -m heddle.cache_server",
-        description="heddle shared verification-cache server (operational, not a heddle subcommand)",
+        prog="python -m hashloom.cache_server",
+        description="hashloom shared verification-cache server (operational, not a hashloom subcommand)",
     )
     p.add_argument("--db", default="cache.db", help="sqlite file for the shared cache (default: cache.db)")
     p.add_argument("--host", default="127.0.0.1", help="bind host (default: 127.0.0.1; use 0.0.0.0 to share)")
     p.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"bind port (default: {DEFAULT_PORT})")
     p.add_argument(
         "--token",
-        default=os.environ.get("HEDDLE_CACHE_TOKEN"),
-        help="bearer token clients must present (or set HEDDLE_CACHE_TOKEN)",
+        default=os.environ.get("HASHLOOM_CACHE_TOKEN"),
+        help="bearer token clients must present (or set HASHLOOM_CACHE_TOKEN)",
     )
     args = p.parse_args(argv)
     if not args.token:
-        p.error("a --token (or HEDDLE_CACHE_TOKEN env var) is required; refusing to run an unauthenticated cache")
+        p.error("a --token (or HASHLOOM_CACHE_TOKEN env var) is required; refusing to run an unauthenticated cache")
     serve(args.db, args.token, host=args.host, port=args.port)
     return 0
 

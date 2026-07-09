@@ -1,7 +1,7 @@
 [project]
-name = "heddle-mcp"  # PyPI distribution name; import name and CLI stay `heddle`
-dynamic = ["version"]  # single-sourced from src/heddle/__init__.py
-description = "RENAMED: this project continues as 'hashloom' on PyPI. Final release under this name. Content-addressed contracts with a hash-keyed verification cache for spec-driven agent loops, over MCP."
+name = "hashloom"  # PyPI distribution name — bare; import name and CLI match
+dynamic = ["version"]  # single-sourced from src/hashloom/__init__.py
+description = "Content-addressed contracts with a hash-keyed verification cache for spec-driven agent loops, over MCP."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
@@ -27,23 +27,23 @@ dependencies = [
 ]
 
 [project.scripts]
-heddle = "heddle.cli:main"
-heddle-mcp = "heddle.cli:serve_main"  # uvx launch shim for the MCP Registry (`uvx heddle-mcp` == `heddle serve`)
+hashloom = "hashloom.cli:main"
+hashloom-mcp = "hashloom.cli:serve_main"  # serve shim: Docker ENTRYPOINT + direct uvx target; registry launches use `uvx hashloom serve` via packageArguments
 
 [project.urls]
-Homepage = "https://github.com/davet47/heddle"
-Repository = "https://github.com/davet47/heddle"
-Issues = "https://github.com/davet47/heddle/issues"
+Homepage = "https://github.com/davet47/hashloom"
+Repository = "https://github.com/davet47/hashloom"
+Issues = "https://github.com/davet47/hashloom/issues"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "src/heddle/__init__.py"
+path = "src/hashloom/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/heddle"]
+packages = ["src/hashloom"]
 
 [dependency-groups]
 dev = ["pytest>=8.0"]

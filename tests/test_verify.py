@@ -2,9 +2,9 @@
 changes anywhere in the dep closure bust the cache; failure summaries stay
 within the token budget."""
 
-from heddle import api, tokens
-from heddle.indexer import index
-from heddle.verify import SUMMARY_MAX_TOKENS
+from hashloom import api, tokens
+from hashloom.indexer import index
+from hashloom.verify import SUMMARY_MAX_TOKENS
 
 from .conftest import write_contract
 

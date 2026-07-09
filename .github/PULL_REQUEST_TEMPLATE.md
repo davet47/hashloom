@@ -12,4 +12,4 @@
       still reports >5x.
 - [ ] Scope: this does not expand the 5-MCP-tool / 5-CLI-command surface, or it
       was discussed in an issue first.
-- [ ] Tool errors stay structured (`HeddleError`); no stack traces over MCP.
+- [ ] Tool errors stay structured (`HashloomError`); no stack traces over MCP.

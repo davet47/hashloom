@@ -21,12 +21,12 @@ import yaml
 
 from . import tokens
 from .config import resolve_timeout
-from .errors import HeddleError, unknown_name
+from .errors import HashloomError, unknown_name
 from .langs import SUMMARY_MAX_TOKENS, adapter_for
 from .store import Store
 
 # directories whose bytecode is not the project's regenerable weft — never nuked
-_PYCACHE_SKIP = frozenset({".venv", "venv", ".heddle", "site-packages", ".git", ".tox", "node_modules"})
+_PYCACHE_SKIP = frozenset({".venv", "venv", ".hashloom", "site-packages", ".git", ".tox", "node_modules"})
 
 
 def clear_pycache(root: Path) -> int:
@@ -88,14 +88,14 @@ def _run_pytest(root: Path, node_ids: list[str], python: str, timeout: int | flo
     )
     out = proc.stdout + "\n" + proc.stderr
     if proc.returncode in (2, 3, 4):  # interrupted / internal error / usage error
-        raise HeddleError(
+        raise HashloomError(
             "tests_failed_to_run",
             tokens.truncate("pytest could not run: " + re.sub(r"\s+", " ", out.strip()), 60),
         )
     # shelling out to a target venv that lacks pytest reports as exit 1 ("No
     # module named pytest"); surface that as a runner error, not a test failure
     if proc.returncode == 1 and "No module named pytest" in out:
-        raise HeddleError("tests_failed_to_run", f"pytest is not installed in '{python}'")
+        raise HashloomError("tests_failed_to_run", f"pytest is not installed in '{python}'")
     return proc.returncode == 0, out
 
 
@@ -115,9 +115,9 @@ def verify_one(
     data = yaml.safe_load(row["yaml"])
 
     if "impl" not in data:
-        raise HeddleError("no_impl", f"'{name}' is spec-only (no impl) — nothing to verify", contract=name)
+        raise HashloomError("no_impl", f"'{name}' is spec-only (no impl) — nothing to verify", contract=name)
     if not data.get("tests"):
-        raise HeddleError("no_tests", f"'{name}' has an impl but no tests — add test node IDs", contract=name)
+        raise HashloomError("no_tests", f"'{name}' has an impl but no tests — add test node IDs", contract=name)
 
     adapter = adapter_for(data["impl"])
     toolchain = adapter.resolve_toolchain(root, override=python)

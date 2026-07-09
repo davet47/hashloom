@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "heddle": {
+    "hashloom": {
       "command": "uv",
-      "args": ["run", "heddle", "serve"]
+      "args": ["run", "hashloom", "serve"]
     }
   }
 }

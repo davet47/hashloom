@@ -8,14 +8,14 @@ import json
 
 import pytest
 
-from heddle import api
-from heddle.config import config_path, resolve_pycache_trust
-from heddle.errors import HeddleError
-from heddle.verify import clear_pycache
+from hashloom import api
+from hashloom.config import config_path, resolve_pycache_trust
+from hashloom.errors import HashloomError
+from hashloom.verify import clear_pycache
 
 
 def _write_config(root, obj) -> None:
-    (root / ".heddle").mkdir(parents=True, exist_ok=True)
+    (root / ".hashloom").mkdir(parents=True, exist_ok=True)
     config_path(root).write_text(json.dumps(obj), encoding="utf-8")
 
 
@@ -38,7 +38,7 @@ def test_pycache_trust_override_beats_config(tmp_path):
 
 def test_bad_pycache_trust_raises_bad_config(tmp_path):
     _write_config(tmp_path, {"pycache_trust": "yes"})
-    with pytest.raises(HeddleError) as e:
+    with pytest.raises(HashloomError) as e:
         resolve_pycache_trust(tmp_path)
     assert e.value.code == "bad_config"
 
@@ -50,12 +50,12 @@ def test_clear_pycache_removes_project_skips_venv_and_store(tmp_path):
     (tmp_path / "src" / "__pycache__").mkdir(parents=True)
     (tmp_path / "src" / "__pycache__" / "m.pyc").write_bytes(b"x")
     (tmp_path / ".venv" / "lib" / "__pycache__").mkdir(parents=True)  # must survive
-    (tmp_path / ".heddle" / "__pycache__").mkdir(parents=True)  # must survive
+    (tmp_path / ".hashloom" / "__pycache__").mkdir(parents=True)  # must survive
     removed = clear_pycache(tmp_path)
     assert removed == 1
     assert not (tmp_path / "src" / "__pycache__").exists()
     assert (tmp_path / ".venv" / "lib" / "__pycache__").exists()
-    assert (tmp_path / ".heddle" / "__pycache__").exists()
+    assert (tmp_path / ".hashloom" / "__pycache__").exists()
 
 
 def test_clear_pycache_detaches_symlinked_cache_without_touching_target(tmp_path):

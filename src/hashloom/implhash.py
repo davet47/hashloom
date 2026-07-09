@@ -12,7 +12,7 @@ import ast
 import hashlib
 from pathlib import Path
 
-from .errors import HeddleError
+from .errors import HashloomError
 
 _DEF_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
 
@@ -49,15 +49,15 @@ def _hash_def(root: Path, path_str: str, qualname: str, contract: str | None = N
     """sha256 of the normalised, docstring-stripped AST of `path_str::qualname`."""
     path = root / path_str
     if not path.is_file():
-        raise HeddleError("impl_not_found", f"file '{path_str}' does not exist", contract=contract)
+        raise HashloomError("impl_not_found", f"file '{path_str}' does not exist", contract=contract)
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"))
     except SyntaxError as e:
-        raise HeddleError("impl_syntax_error", f"'{path_str}' line {e.lineno}: {e.msg}", contract=contract)
+        raise HashloomError("impl_syntax_error", f"'{path_str}' line {e.lineno}: {e.msg}", contract=contract)
 
     node = _find_def(tree, qualname)
     if node is None:
-        raise HeddleError("impl_not_found", f"no function or class '{qualname}' in '{path_str}'", contract=contract)
+        raise HashloomError("impl_not_found", f"no function or class '{qualname}' in '{path_str}'", contract=contract)
 
     dumped = ast.dump(_strip_docstrings(node), annotate_fields=True, include_attributes=False)
     return hashlib.sha256(dumped.encode("utf-8")).hexdigest()
@@ -94,7 +94,7 @@ def test_source_hash(root: Path, node_ids: list[str]) -> str:
                 h = _hash_def(root, path_str, qualname)
             # OSError/ValueError cover unreadable and non-UTF-8 files — the
             # degrade-to-id promise holds even for sources we cannot decode
-            except (HeddleError, OSError, ValueError):
+            except (HashloomError, OSError, ValueError):
                 h = None
         parts.append(f"{nid}={h or 'id'}")
     return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()

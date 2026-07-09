@@ -4,7 +4,7 @@ name: Release
 # No API token is stored: the publish job mints a short-lived OIDC token that
 # PyPI trusts because this repo + workflow + environment are registered there.
 #
-# The published version comes from src/heddle/__init__.py (hatchling reads it
+# The published version comes from src/hashloom/__init__.py (hatchling reads it
 # as the dynamic version); the tag is only the trigger, so keep the tag and
 # __version__ in sync, e.g. __version__ = "0.1.0" published by tag v0.1.0.
 
@@ -28,7 +28,7 @@ jobs:
         # the tag. Fail fast instead of publishing two different versions.
         run: |
           TAG=${GITHUB_REF#refs/tags/v}
-          PKG=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/heddle/__init__.py)
+          PKG=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/hashloom/__init__.py)
           [ "$TAG" = "$PKG" ] || { echo "tag v$TAG != __version__ $PKG" >&2; exit 1; }
       - uses: astral-sh/setup-uv@v6
         with:
@@ -48,7 +48,7 @@ jobs:
     # `name` must match the environment in the PyPI pending-publisher form.
     environment:
       name: pypi
-      url: https://pypi.org/p/heddle-mcp
+      url: https://pypi.org/p/hashloom
     permissions:
       id-token: write  # required for Trusted Publishing; no stored secret
     steps:
