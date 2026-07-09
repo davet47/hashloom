@@ -6,6 +6,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-09
+
+Theme: Java, end to end — a fourth language adapter, its reference example,
+and the adapter seam itself brought under contract. Plus run instructions for
+every example, and the repo dogfooding its own MCP server.
+
 ### Added
 - **Java adapter** — a `.java` impl routes to Java: hashing via a single-file
   `javac`-tree helper (`langs/javahash/JavaHash.java`, JDK-only, zero
@@ -25,7 +31,18 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   layers deep), the shape of a Spring service layer with zero framework
   dependencies (JUnit 5 only, via Maven). Exercises records, `Class.method`
   quals, a parameterized bracket table, and a `@Nested` test class with dotted
-  node ids. `bench/sweep.py` learns the `.java` suite runner.
+  node ids. `bench/sweep.py` learns the `.java` suite runner, and the
+  [benchmark scorecard](docs/benchmarks.md) gains the measured row (3.2× over
+  all 11 units, the most conservative baseline of the four).
+- **Per-example run instructions** — each of the four example projects ships
+  its own README: prerequisites, running the tests directly, the heddle loop,
+  and a blast-radius walkthrough whose radius sizes and re-run sets were
+  executed and measured before landing, not asserted.
+- **Dogfood config** — `.mcp.json` registers the repo's own MCP server at
+  project scope, and CLAUDE.md now directs agents to prefer `get_contract`
+  packets over reading contracted seams' source files.
+- **Glama listing** — a claim file plus an introspectable Dockerfile, the next
+  step in the post-registry discoverability sequence (#64).
 
 ## [0.3.1] - 2026-07-05
 

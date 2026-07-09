@@ -50,7 +50,7 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
   only those does not force a re-run yet. The README documents this caveat;
   closing it is the next precision/soundness item.
 - **Facet-aware invalidation**
-  ([#68](https://github.com/davet47/heddle/issues/68)) —
+  ([#67](https://github.com/davet47/heddle/issues/67)) —
   `put_contract`'s semantic diff already reports
   *which* facet of a contract changed (signature / deps / examples /
   invariants), but invalidation ignores that precision: any hash-relevant
