@@ -185,7 +185,8 @@ cd examples/sales
 heddle init && heddle index && heddle serve   # then point your agent at it
 ```
 
-20 contracts, 25 tests, three dependency layers deep.
+20 contracts, 25 tests, three dependency layers deep. Every example directory
+ships its own README with per-language run instructions.
 
 There are counterpart examples in Go at `examples/go-ledger` (8 contracts over a small
 double-entry ledger, same loop: `heddle init && heddle index`, then
