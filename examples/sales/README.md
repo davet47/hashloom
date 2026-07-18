@@ -46,6 +46,34 @@ signature and `hashloom index` — and `verify --radius Sale` re-verifies
 everything downstream of the type. Cosmetic edits (comments, formatting,
 docstrings) change no hash and re-verify nothing.
 
+## Bootstrap contracts from a graphify graph
+
+This project's contracts are hand-written, but they didn't have to be: the
+[graphify importer](../../integrations/graphify_import.py) can draft them from
+a [graphify](https://github.com/Graphify-Labs/graphify) knowledge graph — the
+brownfield entry point when code exists and contracts don't. The graph gives
+structure (impl locations, dependencies, candidate tests); humans add
+invariants and examples during review.
+
+```bash
+uv tool install graphifyy            # the `graphify` CLI
+graphify extract . --code-only       # local tree-sitter, no API keys needed
+
+# rank candidate seams by how many units depend on them
+uv run python ../../integrations/graphify_import.py graphify-out/graph.json --root . --list
+
+# draft contracts for the seams you pick — everything lands status: inferred
+uv run python ../../integrations/graphify_import.py graphify-out/graph.json --root . \
+    --units src/metrics.py::revenue_by_region src/types.py::Sale
+
+hashloom index && hashloom status    # status shows the inferred review queue
+```
+
+Here the importer refuses to run as-is — these contracts already exist, which
+is the point (`--force` overwrites, `--dry-run` inspects). To see the real
+flow, copy this directory somewhere, delete its `contracts/`, and run the
+commands above; then diff a drafted contract against the hand-written one.
+
 ## Point an agent at it
 
 ```bash
