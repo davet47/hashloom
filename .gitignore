@@ -8,3 +8,6 @@ build/
 .pytest_cache/
 node_modules/
 target/
+# graphify artifacts: the graph is committed, the derived views and caches are not
+graphify-out/*
+!graphify-out/graph.json

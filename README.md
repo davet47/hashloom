@@ -209,6 +209,12 @@ uv run pytest             # full suite; hash stability is the load-bearing suite
 uv run python bench/benchmark.py
 ```
 
+`integrations/` holds repo-only bootstrap tooling — currently an importer that
+drafts `status: inferred` contracts from a
+[graphify](https://github.com/Graphify-Labs/graphify) knowledge graph (see the
+[sales example](examples/sales/README.md) for the walkthrough). Tooling, not
+surface: nothing in it adds an MCP tool or CLI command.
+
 Kept deliberately small: 5 MCP tools, 5 CLI commands, contracts as plain YAML. Everything not in this README is an [issue](ISSUES.md).
 
 ## License
