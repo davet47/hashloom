@@ -26,9 +26,11 @@ representative regeneration tasks, one per dependency layer. The **full sweeps**
 barely benefit — so a sweep always averages lower than the gate. That is not a
 regression; it is the honest cost of counting everything.
 
-Raw-side counts reproduce exactly; hashloom-side totals jitter by ~1 token per
-unit between runs (verify statuses flip `pass` → `cached-pass`), so per-unit
-last decimals move while the ratios hold.
+Hashloom-side counts reproduce exactly (both scripts warm the cache before
+measuring, so every measured verify is a `cached-pass`); raw-side totals can
+drift by ~1 token per unit across environments, because the raw count includes
+live test-runner output and its incidental formatting. Per-unit last decimals
+move while the ratios hold.
 
 ## What one number hides: the distribution
 
@@ -44,7 +46,7 @@ the more a ~300-token packet replaces:
   mode prints nothing on a green suite, so the raw baseline gets *zero*
   suite-output tokens here — the Java row is the most conservative of the four.)
 
-The examples are deliberately small (8–20 contracts, 2–3 layers), so their
+The examples are deliberately small (8–20 contracts, chains two to six deep), so their
 sweeps sit in the 3–4× range. Deeper projects score higher, not lower: every
 additional dependency layer widens the gap between reading a closure and
 reading a packet. The DoD gate's 5.4× on three mid-to-deep units shows the
@@ -53,7 +55,7 @@ same effect inside one project.
 ## Cache economics (from a real store, not a benchmark)
 
 Verification caching is the other half of the payoff. This repo dogfoods
-hashloom (12 contracts over its own stable seams — see `contracts/`), and its
+hashloom (13 contracts over its own stable seams — see `contracts/`), and its
 store counters after day one:
 
 | store | verify requests | served from cache | test runs avoided | hit rate |

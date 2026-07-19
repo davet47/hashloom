@@ -39,7 +39,7 @@ how incomplete sales are excluded, say — then:
 hashloom verify --radius included_sales
 ```
 
-Exactly one unit re-runs; its twelve dependents stay `cached-pass`, because
+Exactly one unit re-runs; its fourteen dependents stay `cached-pass`, because
 they lean on `included_sales`'s *contract*, which didn't change. Now edit a
 contract instead — add a field to [contracts/Sale.yaml](contracts/Sale.yaml)'s
 signature and `hashloom index` — and `verify --radius Sale` re-verifies

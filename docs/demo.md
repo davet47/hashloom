@@ -27,7 +27,7 @@ rm -rf .hashloom && hashloom init && hashloom index
 | 2 | benchmark table | `uv run python bench/benchmark.py` | 5×+ fewer tokens per regeneration | 5 |
 | 3 | the ask | Claude Code: "re-implement `revenue_by_region`" | the agent asks hashloom, not the filesystem | 3 |
 | 4 | `get_contract` | MCP `get_contract("revenue_by_region")` → packet | one ~300-token packet: spec + dep signatures + callers | 5 |
-| 5 | the weave | agent edits `src/revenue.py::revenue_by_region` | it weaves the weft | 4 |
+| 5 | the weave | agent edits `src/metrics.py::revenue_by_region` | it weaves the weft | 4 |
 | 6 | `verify` (miss) | MCP `verify(["revenue_by_region"])` → `pass` | hash-keyed verification — pytest only on a miss | 5 |
 | 7 | `verify` (hit) | `verify` again → `cached-pass` | second run: cached-pass, no pytest | 3 |
 | 8 | `status` | MCP `status()` → token counters | the whole loop, in a few hundred tokens | 4 |
@@ -54,7 +54,7 @@ reports `tokens: 0`: the token counters are incremented only by the MCP server
 
 ## Recording tips
 - Scene 2's benchmark rebuilds and warms `examples/sales/.hashloom`, so don't wipe
-  the store after it. Scene 5's edit to `src/revenue.py::revenue_by_region` busts
+  the store after it. Scene 5's edit to `src/metrics.py::revenue_by_region` busts
   only that unit's impl hash, so scene 6 verifies it cold (a real pytest `pass`),
   scene 7 reuses the cache, and scene 8's `status` stays clean (`dirty: 0`).
   Re-indexing the whole store instead leaves every other contract `dirty` and

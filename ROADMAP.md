@@ -2,7 +2,8 @@
 
 **Shipped so far** (full detail in the [CHANGELOG](CHANGELOG.md)):
 
-- **v0.1** (0.1.0 → PyPI as `hashloom`, 2026-06-23) — the engine:
+- **v0.1** (0.1.0 → PyPI as `heddle-mcp`, 2026-06-23; the project renamed to
+  `hashloom` in 0.4.0) — the engine:
   content-addressed contracts, a hash-keyed verification cache, and a
   blast-radius query, over MCP. Single-process and Python-only by design.
 - **v0.2** (0.2.0 → PyPI, 2026-07-04) — solo → team: a shared verification

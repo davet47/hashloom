@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- `integrations/graphify_import.py` (#80, PR #81): draft `status: inferred`
+  contracts from a [graphify](https://github.com/Graphify-Labs/graphify)
+  knowledge graph — the brownfield entry point. Signatures come from the
+  Python source via `ast`; deps only from EXTRACTED edges between selected
+  units. Repo-only tooling: no new MCP tools or CLI commands. The repo's own
+  extracted graph is committed at `graphify-out/graph.json`.
+
 ## [0.4.0] - 2026-07-09
 
 **Renamed: heddle → hashloom.** Two unrelated "heddle" MCP servers already

@@ -185,21 +185,24 @@ cd examples/sales
 hashloom init && hashloom index && hashloom serve   # then point your agent at it
 ```
 
-20 contracts, 25 tests, three dependency layers deep. Every example directory
-ships its own README with per-language run instructions.
+20 contracts, 25 tests, dependency chains up to six contracts deep. Every
+example directory ships its own README with per-language run instructions.
 
-There are counterpart examples in Go at `examples/go-ledger` (8 contracts over a small
-double-entry ledger, same loop: `hashloom init && hashloom index`, then
-`hashloom verify --radius Entry` gates the blast radius with `go test` under the
-hood — needs a Go toolchain), in TypeScript at `examples/ts-cart`
-(8 contracts over a shopping cart; `npm install` first for its `typescript`,
-then the same loop — verification runs on Node's built-in `node:test`, Node
->= 22.6), and in Java at `examples/java-payroll` (11 contracts over a weekly
-payroll run, three layers deep — records, `Class.method` quals, a parameterized
-bracket table, and a `@Nested` test class with dotted node ids; the shape of a
-Spring service layer with zero framework dependencies. Same loop —
-`hashloom verify --radius TimeSheet` runs Maven under the hood; needs a JDK >= 17
-and Maven).
+There are counterpart examples in three other languages, each using the same
+`init && index` loop:
+
+- **Go** — `examples/go-ledger`: 8 contracts over a small double-entry ledger.
+  `hashloom verify --radius Entry` gates the blast radius with `go test` under
+  the hood. Needs a Go toolchain.
+- **TypeScript** — `examples/ts-cart`: 8 contracts over a shopping cart. Run
+  `npm install` first for its `typescript`; verification runs on Node's
+  built-in `node:test`. Needs Node >= 22.6.
+- **Java** — `examples/java-payroll`: 11 contracts over a weekly payroll run,
+  three layers deep — records, `Class.method` quals, a parameterized bracket
+  table, and a `@Nested` test class with dotted node ids; the shape of a
+  Spring service layer with zero framework dependencies.
+  `hashloom verify --radius TimeSheet` runs Maven under the hood. Needs a
+  JDK >= 17 and Maven.
 
 ## Development
 

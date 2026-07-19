@@ -29,8 +29,11 @@ Behind the Protocol it can later be a remote backend with no change to callers.
 `tests/test_shared_store.py` shows client A's green served to client B without
 B running pytest, and confirms failures are not published.
 
-What the MVP does NOT do yet: it is not wired into the CLI/MCP (no surface
-change), and the shared store is local-file only. Wiring is below.
+When the MVP first shipped it was not yet wired into the CLI/MCP and the
+shared store was local-file only; both have since shipped — `build_store()`
+wires the layered store into `index`/`status`/`verify` and the MCP server,
+and `RemoteStore` makes the shared side an HTTP backend (item 1 below and
+"Running the cache server").
 
 ## From MVP to hosted (the hard parts)
 
@@ -62,8 +65,10 @@ change), and the shared store is local-file only. Wiring is below.
 5. **Cross-graph invalidation.** When a shared contract changes, dependents'
    shared verdicts must be invalidated for the whole team, not just locally.
    `mark_stale` needs a shared analogue keyed off the dependency graph.
-6. **Clocks.** `ran_at` is client-generated today; a shared store should stamp
-   server-side to order writes without trusting client clocks.
+6. ✓ **Clocks (shipped for the shared path).** The cache server's own
+   `SqliteStore` stamps `ran_at` server-side — the client's publish request
+   carries no timestamp — so write ordering never trusts client clocks.
+   Local stores still stamp locally, where ordering is single-writer anyway.
 
 ## Running the cache server
 

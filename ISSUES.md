@@ -3,8 +3,8 @@
 Per the v0.1 spec: if a task isn't on a milestone, it's an issue. The repo now
 has a remote, so new follow-ups are filed on the GitHub tracker (the
 verification-model sharpening lives there as
-[#18](https://github.com/davet47/heddle/issues/18) through
-[#20](https://github.com/davet47/heddle/issues/20), prioritised in
+[#18](https://github.com/davet47/hashloom/issues/18) through
+[#20](https://github.com/davet47/hashloom/issues/20), prioritised in
 [ROADMAP.md](ROADMAP.md)). This file keeps the original spec non-goals and the
 launch follow-ups, with status as of the 0.1.0 release (shipped 2026-06-23).
 
@@ -19,7 +19,7 @@ launch follow-ups, with status as of the 0.1.0 release (shipped 2026-06-23).
 
 ## Known limitations / follow-ups
 
-7. **PyPI release**: ✓ **Resolved in 0.1.0.** Published as `heddle-mcp` (the bare `heddle` name is held by a third-party placeholder) via GitHub Actions Trusted Publishing. `pip install heddle-mcp`; the import name and CLI stay `heddle`. See [RELEASING.md](RELEASING.md).
+7. **PyPI release**: ✓ **Resolved in 0.1.0.** Published as `heddle-mcp` (the bare `heddle` name was held by a third-party placeholder) via GitHub Actions Trusted Publishing; the import name and CLI stayed `heddle` through 0.3.3. Since the 0.4.0 rename the distribution, import name, and CLI are all `hashloom` — see item 10. See [RELEASING.md](RELEASING.md).
 8. **README gif**: ✓ **Resolved in 0.1.0.** Recorded and embedded under the CI badge; storyboard in [docs/demo.md](docs/demo.md).
 9. **Pre-existing stale bytecode**: partially mitigated. The verification runner passes `-B` / `PYTHONDONTWRITEBYTECODE` so its own runs never cache bytecode, but with the default `pycache_trust: true` a stale user-written `__pycache__` (same size, same mtime second) could still be loaded. Mitigation shipped: set `pycache_trust: false` (or `--no-pycache-trust`) to clear `__pycache__` before each verify run. Making that the default remains a possible future change.
 10. **Name finalization**: ✓ **Resolved**, then revised. "heddle" was the locked project name through 0.3.3 (PyPI: `heddle-mcp`); renamed to **hashloom** in 0.4.0 after two unrelated "heddle" MCP servers surfaced — see the CHANGELOG's 0.4.0 entry. The bare `hashloom` PyPI name is ours.
