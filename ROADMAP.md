@@ -31,8 +31,11 @@ this is the prioritization.
 v0.2 made the cache shareable; v0.5 makes sharing it safe at team scale. The
 remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
 
-- **Auth scoping** — split publish from read: CI can write greens, a laptop can
-  only consume them. Today one bearer token does both.
+- **Auth scoping** — ✓ **Shipped** (unreleased): the cache server takes an
+  optional `--publish-token`; reads accept either token (publish implies read),
+  publishes require the publish token — CI writes greens, a laptop with the
+  read token only consumes. A single token still grants both roles, so existing
+  deployments are unchanged. Per-project/team tokens remain deferred.
 - **Concurrent writers** — the cache server is single-threaded-serialised;
   real teams need atomic verdict/blob writes under concurrency (CAS or
   equivalent), not politeness.

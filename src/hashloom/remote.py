@@ -28,14 +28,18 @@ from .store import SqliteStore, Store
 
 
 class RemoteStore:
-    def __init__(self, url: str, token: str, timeout: float = 5.0):
+    def __init__(self, url: str, token: str, timeout: float = 5.0, publish: bool = True):
         self._base = url.rstrip("/")
         self._token = token
         self._timeout = timeout
+        # a read-only client (`shared.publish: false`) skips publishes outright
+        # instead of collecting one rejected POST per verdict/blob; a *rejected*
+        # publish was already a swallowed no-op, this just saves the round trip
+        self._publish = publish
 
     @classmethod
     def from_config(cls, cfg: dict) -> RemoteStore:
-        return cls(cfg["url"], cfg["token"])
+        return cls(cfg["url"], cfg["token"], publish=cfg.get("publish", True))
 
     # -- the four team-portable methods -------------------------------------
 
@@ -44,6 +48,8 @@ class RemoteStore:
         return body if st == 200 and isinstance(body, dict) else None
 
     def record_verification(self, key: str, contract_name: str, status: str, summary: str) -> None:
+        if not self._publish:
+            return
         # fire-and-forget; _request swallows any transport error. The layer has
         # already written the verdict locally, so a publish failure loses nothing.
         self._request("POST", "/verification", {
@@ -55,7 +61,8 @@ class RemoteStore:
         return body.get("content") if st == 200 and isinstance(body, dict) else None
 
     def put_blob(self, content: str) -> str:
-        self._request("POST", "/blob", {"content": content})
+        if self._publish:
+            self._request("POST", "/blob", {"content": content})
         # the layer uses the *local* hash; return ours regardless of the network
         return hashlib.sha256(content.encode("utf-8")).hexdigest()
 

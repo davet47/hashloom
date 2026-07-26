@@ -161,6 +161,103 @@ def test_auth_rejected_but_verify_still_degrades(cache, tmp_path):
     local.close()
 
 
+# -- auth scoping: split publish from read ----------------------------------
+
+_PUBLISH_TOKEN = "publish-token"
+
+
+@pytest.fixture
+def scoped_cache(tmp_path):
+    """A cache_server with split read/publish tokens; yields (base_url, server_store)."""
+    store = SqliteStore(tmp_path / "cache.db", check_same_thread=False)
+    httpd = CacheServer(("127.0.0.1", 0), store, _TOKEN, publish_token=_PUBLISH_TOKEN)
+    port = httpd.server_address[1]
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{port}", store
+    finally:
+        httpd.shutdown()
+        thread.join(timeout=5)
+        httpd.server_close()
+        store.close()
+
+
+def test_read_token_reads_but_cannot_publish(scoped_cache):
+    base, _ = scoped_cache
+    assert _raw("GET", base, _TOKEN, "/verification/whatever") == 404  # authed, no such row
+    assert _raw("POST", base, _TOKEN, "/blob", {"content": "x"}) == 403
+    assert _raw("POST", base, _TOKEN, "/verification",
+                {"key": "k", "contract_name": "c", "status": "pass", "summary": ""}) == 403
+
+
+def test_publish_token_implies_read(scoped_cache):
+    base, store = scoped_cache
+    assert _raw("GET", base, _PUBLISH_TOKEN, "/verification/whatever") == 404  # reads too
+    assert _raw("POST", base, _PUBLISH_TOKEN, "/blob", {"content": "x"}) == 200
+    assert _raw("POST", base, _PUBLISH_TOKEN, "/verification",
+                {"key": "k", "contract_name": "c", "status": "pass", "summary": ""}) == 204
+    assert store.get_verification("k")["status"] == "pass"
+
+
+def test_unknown_token_is_401_on_both_verbs(scoped_cache):
+    base, _ = scoped_cache
+    assert _raw("GET", base, "wrong-token", "/verification/whatever") == 401
+    assert _raw("POST", base, "wrong-token", "/blob", {"content": "x"}) == 401
+
+
+def test_single_token_server_still_grants_both_roles(cache):
+    # back-compat pin: with no publish token configured, --token publishes too
+    base, token = cache
+    assert _raw("POST", base, token, "/blob", {"content": "x"}) == 200
+
+
+def test_ci_publishes_laptop_consumes(scoped_cache, tmp_path):
+    base, server_store = scoped_cache
+    root = tmp_path / "proj"
+    root.mkdir()
+    _make_project(root)
+
+    # CI: publish token. verify runs pytest once and publishes the green.
+    ci_local = SqliteStore(root / ".hashloom" / "ci.db")
+    ci = LayeredStore(ci_local, RemoteStore(base, _PUBLISH_TOKEN))
+    index(root, ci)
+    assert api.verify(root, ci, ["total"])["results"][0]["status"] == "pass"
+
+    # laptop: read token. the green is served over HTTP without pytest.
+    lap_local = SqliteStore(root / ".hashloom" / "lap.db")
+    lap = LayeredStore(lap_local, RemoteStore(base, _TOKEN))
+    index(root, lap)
+    assert api.verify(root, lap, ["total"])["results"][0]["status"] == "cached-pass"
+    assert lap_local.counters().get("test_runs", 0) == 0
+
+    # the laptop's own new green stays local: its publish is rejected (403),
+    # swallowed, and verify still passes
+    (root / "src" / "x.py").write_text("def total(xs):\n    return sum(xs) + 0\n")
+    r = verify_one(root, lap, "total")
+    assert r["status"] == "pass"
+    assert server_store.get_verification(r["key"]) is None
+    ci_local.close()
+    lap_local.close()
+
+
+def test_publish_false_client_skips_posts_entirely(cache, tmp_path):
+    base, token = cache
+    root = tmp_path / "proj"
+    root.mkdir()
+    _make_project(root)
+    # even with a fully-capable token, publish=False never POSTs
+    local = SqliteStore(root / ".hashloom" / "x.db")
+    store = LayeredStore(local, RemoteStore(base, token, publish=False))
+    index(root, store)
+    r = verify_one(root, store, "total")
+    assert r["status"] == "pass"
+    assert RemoteStore(base, token).get_verification(r["key"]) is None  # nothing landed
+    blob_hash = local.get_impl("total")["blob_hash"]
+    assert RemoteStore(base, token).get_blob(blob_hash) is None  # blobs suppressed too
+    local.close()
+
+
 def test_resolve_shared_store_validation(tmp_path):
     init_project(tmp_path)
     cfg = tmp_path / ".hashloom" / "config.json"
@@ -169,12 +266,16 @@ def test_resolve_shared_store_validation(tmp_path):
     assert resolve_shared_store(tmp_path) is None  # no shared block -> local only
 
     cfg.write_text(json.dumps({"shared": {"url": "http://h", "token": "t"}}))
-    assert resolve_shared_store(tmp_path) == {"url": "http://h", "token": "t"}
+    assert resolve_shared_store(tmp_path) == {"url": "http://h", "token": "t", "publish": True}
+
+    cfg.write_text(json.dumps({"shared": {"url": "http://h", "token": "t", "publish": False}}))
+    assert resolve_shared_store(tmp_path)["publish"] is False
 
     for bad in ({"shared": "nope"},
                 {"shared": {"token": "t"}},          # missing url
                 {"shared": {"url": "http://h"}},      # missing token
-                {"shared": {"url": "", "token": "t"}}):  # empty url
+                {"shared": {"url": "", "token": "t"}},   # empty url
+                {"shared": {"url": "http://h", "token": "t", "publish": "no"}}):  # non-bool publish
         cfg.write_text(json.dumps(bad))
         with pytest.raises(HashloomError) as e:
             resolve_shared_store(tmp_path)

@@ -7,6 +7,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Cache-server auth scoping (v0.5 theme, item 1): `python -m
+  hashloom.cache_server` takes an optional `--publish-token` (or
+  `HASHLOOM_CACHE_PUBLISH_TOKEN`). When set, publishes (POST) require it and
+  reads (GET) accept either token — publish implies read — so CI writes
+  greens and a laptop with the read token can only consume them. A valid
+  read token on a publish route gets 403 `read_only` (vs 401 `unauthorized`
+  for an unknown token). Back-compat: with only `--token`, that token grants
+  both roles, byte-identical to before. Client side, `.hashloom/config.json`
+  `shared` takes an optional `"publish": false` for read-only clients to
+  skip publish requests entirely (a rejected publish was already a swallowed
+  no-op). Per-project/team tokens remain deferred.
 - Strict provenance mode (#49): opt-in `.hashloom/config.json`
   `{"strict_provenance": true}`. `verify` refuses any unit whose dependency
   closure contains a `status: inferred` contract — a structured
