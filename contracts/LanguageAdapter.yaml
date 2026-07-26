@@ -14,5 +14,5 @@ tests:
   - tests/test_dep_identity.py::test_bare_root_identity_is_byte_identical_to_version_only
   - tests/test_dep_identity.py::test_python_identity_gains_dep_suffix
 impl: src/hashloom/langs/__init__.py::LanguageAdapter
-status: inferred
+status: confirmed
 
