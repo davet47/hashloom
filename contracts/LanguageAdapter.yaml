@@ -12,4 +12,4 @@ tests:
   - tests/test_langs_seam.py::test_every_adapter_implements_the_protocol
   - tests/test_langs_seam.py::test_failure_summaries_are_capped
 impl: src/hashloom/langs/__init__.py::LanguageAdapter
-status: inferred
+status: confirmed
