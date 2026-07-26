@@ -336,6 +336,160 @@ def test_unexpected_store_error_returns_structured_500(scoped_cache, monkeypatch
     assert "Traceback" not in body
 
 
+# -- key-addressed revocation: POST /stale + GET /stale ----------------------
+
+
+def _stale(base: str, token: str, body: dict) -> tuple[int, str]:
+    return _raw_body("POST", base, token, "/stale", body)
+
+
+def test_stale_route_tombstones_key_end_to_end(scoped_cache, tmp_path):
+    base, server_store = scoped_cache
+    assert _publish(base, _PUBLISH_TOKEN, "k1") == 204
+    status, _ = _stale(base, _PUBLISH_TOKEN, {"keys": ["k1"], "reason": "flaky: wall-clock test"})
+    assert status == 200
+    assert server_store.get_verification("k1")["stale"] == 1
+    # a fresh client refuses the stale row and back-fills nothing
+    local = SqliteStore(tmp_path / "fresh.db")
+    layered = LayeredStore(local, RemoteStore(base, _TOKEN))
+    assert layered.get_verification("k1") is None
+    assert local.get_verification("k1") is None
+    local.close()
+
+
+def test_name_sweep_resolves_to_existing_keys(scoped_cache):
+    base, server_store = scoped_cache
+    assert _publish(base, _PUBLISH_TOKEN, "ka") == 204
+    assert _publish(base, _PUBLISH_TOKEN, "kb") == 204
+    status, body = _stale(base, _PUBLISH_TOKEN, {"names": ["c"], "reason": "bad conftest"})
+    assert status == 200 and json.loads(body)["marked"] == 2
+    assert server_store.get_verification("ka")["stale"] == 1
+    assert server_store.get_verification("kb")["stale"] == 1
+    # a sweep marks what exists, not what will be: the name's next key lands fresh
+    assert _publish(base, _PUBLISH_TOKEN, "kc") == 204
+    assert server_store.get_verification("kc")["stale"] == 0
+
+
+def test_premarked_key_lands_stale(scoped_cache):
+    base, server_store = scoped_cache
+    # revoke before the green ever lands (the mark-before-publish ordering)
+    status, body = _stale(base, _PUBLISH_TOKEN, {"keys": ["future-key"]})
+    assert status == 200
+    # no row yet: the response says so instead of looking like a failed mark
+    assert json.loads(body) == {"marked": 0, "keys": 1, "premarked": 1}
+    assert _publish(base, _PUBLISH_TOKEN, "future-key") == 204
+    assert server_store.get_verification("future-key")["stale"] == 1
+
+
+def test_republish_after_revoke_stays_stale(scoped_cache):
+    base, server_store = scoped_cache
+    assert _publish(base, _PUBLISH_TOKEN, "k2") == 204
+    before = server_store.get_verification("k2")
+    _stale(base, _PUBLISH_TOKEN, {"keys": ["k2"]})
+    assert _publish(base, _PUBLISH_TOKEN, "k2") == 204  # accepted, but a no-op
+    after = server_store.get_verification("k2")
+    assert after["stale"] == 1
+    assert after["ran_at"] == before["ran_at"]
+
+
+def test_restore_unrevokes_and_clears_the_listing(scoped_cache, tmp_path):
+    base, server_store = scoped_cache
+    assert _publish(base, _PUBLISH_TOKEN, "k3") == 204
+    _stale(base, _PUBLISH_TOKEN, {"keys": ["k3"], "reason": "oops"})
+    status, body = _raw_body("GET", base, _TOKEN, "/stale")
+    listed = json.loads(body)["stale"]
+    assert status == 200 and [r["key"] for r in listed] == ["k3"]
+    assert listed[0]["reason"] == "oops" and listed[0]["contract_name"] == "c"
+    status, _ = _stale(base, _PUBLISH_TOKEN, {"keys": ["k3"], "stale": False})
+    assert status == 200
+    assert server_store.get_verification("k3")["stale"] == 0
+    _, body = _raw_body("GET", base, _TOKEN, "/stale")
+    assert json.loads(body)["stale"] == []
+    # the restored green serves again
+    local = SqliteStore(tmp_path / "fresh.db")
+    assert LayeredStore(local, RemoteStore(base, _TOKEN)).get_verification("k3") is not None
+    local.close()
+
+
+def test_stale_requires_publish_token(scoped_cache):
+    base, _ = scoped_cache
+    assert _stale(base, _TOKEN, {"keys": ["k"]})[0] == 403       # read token: scope problem
+    assert _stale(base, "wrong", {"keys": ["k"]})[0] == 401      # unknown token
+    assert _raw("GET", base, _TOKEN, "/stale") == 200            # listing is a read
+
+
+def test_stale_bad_request(scoped_cache):
+    base, _ = scoped_cache
+    for bad in ({},                                   # no selectors
+                {"keys": [], "names": []},            # empty selectors
+                {"keys": "k"},                        # non-list
+                {"keys": [""]},                       # empty string entry
+                {"keys": [1]},                        # non-string entry
+                {"keys": ["k"], "stale": "yes"},      # non-bool stale
+                {"keys": ["k"], "reason": 7},         # non-string reason
+                {"names": ["c"], "stale": False},     # restore is key-addressed only
+                {"keys": [f"k{i}" for i in range(1001)]}):  # over the cap
+        status, body = _stale(base, _PUBLISH_TOKEN, bad)
+        assert status == 400, bad
+        assert "Traceback" not in body
+
+
+def test_name_sweep_resolving_over_the_cap_is_refused(scoped_cache):
+    base, server_store = scoped_cache
+    # seed 1001 keys under one name directly (HTTP would need 1001 requests)
+    for i in range(1001):
+        server_store.record_verification(f"bulk-{i}", "c", "pass", "")
+    status, body = _stale(base, _PUBLISH_TOKEN, {"names": ["c"]})
+    assert status == 400
+    assert "1000" in body
+
+
+def test_sweep_preserves_earlier_revocation_audit_and_restore_scope(scoped_cache):
+    base, server_store = scoped_cache
+    # June: k1 individually revoked; July: a name sweep covers it too
+    assert _publish(base, _PUBLISH_TOKEN, "k-old") == 204
+    assert _publish(base, _PUBLISH_TOKEN, "k-new") == 204
+    _stale(base, _PUBLISH_TOKEN, {"keys": ["k-old"], "reason": "flaky: needs redis"})
+    _stale(base, _PUBLISH_TOKEN, {"names": ["c"], "reason": "bad conftest"})
+    listing = {r["key"]: r["reason"] for r in json.loads(_raw_body("GET", base, _TOKEN, "/stale")[1])["stale"]}
+    # first reason wins: the sweep did not rewrite k-old's audit record
+    assert listing == {"k-old": "flaky: needs redis", "k-new": "bad conftest"}
+    # the sweep's restore names its keys explicitly and cannot lift k-old's tombstone
+    _stale(base, _PUBLISH_TOKEN, {"keys": ["k-new"], "stale": False})
+    assert server_store.get_verification("k-new")["stale"] == 0
+    assert server_store.get_verification("k-old")["stale"] == 1  # June's revocation survives
+
+
+def test_stale_idempotent_and_unknown_name(scoped_cache):
+    base, _ = scoped_cache
+    assert _publish(base, _PUBLISH_TOKEN, "k4") == 204
+    assert _stale(base, _PUBLISH_TOKEN, {"keys": ["k4"]})[0] == 200
+    assert _stale(base, _PUBLISH_TOKEN, {"keys": ["k4"]})[0] == 200  # double mark is fine
+    status, body = _stale(base, _PUBLISH_TOKEN, {"names": ["ghost"]})
+    assert status == 200 and json.loads(body)["marked"] == 0
+
+
+def test_revocation_survives_local_store_rebuild(scoped_cache, tmp_path):
+    base, server_store = scoped_cache
+    root = tmp_path / "proj"
+    root.mkdir()
+    _make_project(root)
+    # CI verifies and publishes the green
+    ci = LayeredStore(SqliteStore(root / ".hashloom" / "ci.db"), RemoteStore(base, _PUBLISH_TOKEN))
+    index(root, ci)
+    r = verify_one(root, ci, "total")
+    assert r["status"] == "pass"
+    # operator revokes it (flaky); a teammate with a FRESH local store must
+    # re-run, not consume the tombstoned green — revocation outlives rebuilds
+    _stale(base, _PUBLISH_TOKEN, {"keys": [r["key"]], "reason": "flaky"})
+    lap_local = SqliteStore(root / ".hashloom" / "lap.db")
+    lap = LayeredStore(lap_local, RemoteStore(base, _TOKEN))
+    index(root, lap)
+    assert api.verify(root, lap, ["total"])["results"][0]["status"] == "pass"  # re-ran
+    assert lap_local.counters().get("test_runs", 0) == 1
+    lap_local.close()
+
+
 def test_resolve_shared_store_validation(tmp_path):
     init_project(tmp_path)
     cfg = tmp_path / ".hashloom" / "config.json"

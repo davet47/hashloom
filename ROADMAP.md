@@ -41,9 +41,15 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
   publishes are first-writer-wins on the verification key — a duplicate
   publish is a no-op, never a `ran_at` refresh or `stale` reset. WAL +
   per-thread connections remain the documented throughput follow-up.
-- **Cross-graph invalidation** — a shared green is keyed by content hashes, but
-  nothing yet propagates "this contract changed upstream" across clients whose
-  local graphs disagree.
+- **Cross-graph invalidation** — ✓ **Shipped** (unreleased) as *key-addressed
+  revocation*: analysis showed content-addressed keys already propagate
+  contract changes across graphs (every dependent's key moves), so the
+  graph-keyed shared `mark_stale` was deliberately not built. What shipped
+  closes the real residual gap — greens that were wrong at publish time
+  (flaky, env drift) used to be immortal team-wide; `POST /stale` tombstones
+  their keys (with audit, restore, and name sweeps), and a revoked key stays
+  stale under any publish. See docs/hosted-store.md item 5 for the full
+  argument.
 - **Dependency set in the key** — the deeper soundness knob: fold the lockfile /
   resolved dependency set (and possibly OS/arch) into the toolchain identity, so
   a green from an environment with different third-party versions is not

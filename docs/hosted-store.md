@@ -76,9 +76,54 @@ and `RemoteStore` makes the shared side an HTTP backend (item 1 below and
    return structured JSON 500s, never a stack trace. Deferred throughput
    path, if a team ever saturates the lock: WAL journal mode + per-thread
    connections + bounded busy-retry.
-5. **Cross-graph invalidation.** When a shared contract changes, dependents'
-   shared verdicts must be invalidated for the whole team, not just locally.
-   `mark_stale` needs a shared analogue keyed off the dependency graph.
+5. ✓ **Cross-graph invalidation (shipped as key-addressed revocation).** The
+   literal design here used to read "`mark_stale` needs a shared analogue
+   keyed off the dependency graph" — that mechanism was analyzed and
+   deliberately **not built**, because content-addressed verification keys
+   already are the cross-graph propagation: an upstream contract change moves
+   every dependent's key, so new-graph clients never look up pre-change
+   greens, and old-graph clients consuming old greens receive verdicts that
+   are correct for their checkouts. A graph/name-keyed auto-mark would be
+   harmful: the server holds no graph (contracts travel via git), name marks
+   would strip old-graph clients of valid greens, a mid-edit `put_contract`
+   on one laptop could tombstone the team's greens, and under first-writer-
+   wins (#4) every mark is permanent. Do not re-implement the literal
+   reading.
+
+   What the key *cannot* see — and what shipped — is revocation of greens
+   that were **wrong at publish time** at an unchanged key: flaky or
+   nondeterministic passes, env drift outside the toolchain identity (dep
+   set, OS), conftest/helper changes the test-source hash misses. Such a
+   green used to be immortal team-wide. Now: `POST /stale`
+   (publish-token-gated) tombstones verification keys — given directly, or
+   as contract `names` the server resolves to their *existing* keys (a sweep
+   marks what is, never future keys; dependent radii stay client-computed
+   via `get_dependents` and passed as names). A revoked key stays stale
+   under any publish (a `stale_marks` side table makes even
+   mark-before-publish land stale); `{"stale": false}` is the only restore
+   — and it takes **keys only**, so restoring a sweep can never lift
+   tombstones the sweep did not create. Audit records are
+   first-reason-wins: a later sweep never rewrites why a key was originally
+   revoked. `GET /stale` lists every mark with its reason and timestamp.
+   Remediation for clients that already back-filled a bad green:
+   `rm .hashloom/store.db && hashloom index` — always safe, the *local*
+   store is derived. The server's cache.db is not, which is why the restore
+   route exists instead of "hand-edit sqlite". Automatic
+   counter-evidence revocation (client fails where the cache is green) is
+   deliberately deferred: toolchain identity is version-only, so one
+   broken-env laptop could tombstone keys green for everyone else —
+   revisit once the dependency set enters the key.
+
+   Revoking a green:
+
+   ```bash
+   # find the key: it's in verify_one's result, or GET /verification/<key>
+   curl -X POST $BASE/stale -H "Authorization: Bearer $PUBLISH_TOKEN" \
+        -d '{"keys": ["<64-hex>"], "reason": "flaky: needs local redis"}'
+   curl $BASE/stale -H "Authorization: Bearer $READ_TOKEN"   # audit listing
+   curl -X POST $BASE/stale -H "Authorization: Bearer $PUBLISH_TOKEN" \
+        -d '{"keys": ["<64-hex>"], "stale": false}'          # undo
+   ```
 6. ✓ **Clocks (shipped for the shared path).** The cache server's own
    `SqliteStore` stamps `ran_at` server-side — the client's publish request
    carries no timestamp — so write ordering never trusts client clocks.

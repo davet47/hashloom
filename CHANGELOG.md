@@ -19,6 +19,19 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   of bare stack traces. Wire protocol unchanged; clients need no update.
 
 ### Added
+- Key-addressed revocation (v0.5 theme, item 3 — "cross-graph invalidation"):
+  `POST /stale` on the cache server (publish-token-gated) tombstones
+  verification keys whose green was wrong at publish time — flaky passes,
+  env drift the key cannot see. Keys can be given directly or as contract
+  `names` the server resolves to their existing keys; a revoked key stays
+  stale under any publish (including mark-before-publish); `{"stale":
+  false}` restores; `GET /stale` lists every mark with reason + timestamp.
+  Zero client changes — stale enforcement already shipped end-to-end; this
+  route is its missing trigger. The literal graph-keyed shared `mark_stale`
+  was deliberately not built: content-addressed keys already propagate
+  contract changes across graphs (the argument is recorded in
+  docs/hosted-store.md item 5). Automatic counter-evidence revocation is
+  deferred to ISSUES.md.
 - Cache-server auth scoping (v0.5 theme, item 1): `python -m
   hashloom.cache_server` takes an optional `--publish-token` (or
   `HASHLOOM_CACHE_PUBLISH_TOKEN`). When set, publishes (POST) require it and
