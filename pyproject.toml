@@ -46,7 +46,13 @@ path = "src/hashloom/__init__.py"
 packages = ["src/hashloom"]
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "pytest-cov>=7.0"]
+
+# subprocess: the e2e test's spawned `hashloom serve` records coverage too
+# (the test passes COVERAGE_* through the mcp client's env allowlist)
+[tool.coverage.run]
+patch = ["subprocess"]
+sigterm = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

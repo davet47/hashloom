@@ -2,6 +2,7 @@
 an agent would."""
 
 import json
+import os
 import sys
 
 import anyio
@@ -18,6 +19,9 @@ def call(project_root, requests):
             command=sys.executable,
             args=["-m", "hashloom.cli", "serve"],
             cwd=str(project_root),
+            # the mcp client strips the child env to an allowlist; pass coverage's
+            # subprocess hand-off vars through (empty when not measuring)
+            env={k: v for k, v in os.environ.items() if k.startswith("COVERAGE")},
         )
         out = []
         async with stdio_client(params) as (read, write):
