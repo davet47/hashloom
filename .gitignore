@@ -6,6 +6,9 @@ build/
 *.egg-info/
 .hashloom/
 .pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
 node_modules/
 target/
 # graphify artifacts: the graph is committed, the derived views and caches are not

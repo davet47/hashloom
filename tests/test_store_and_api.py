@@ -231,3 +231,44 @@ def test_status_lists_inferred_including_spec_only(project):
     _mark_inferred(root, store, "Item")  # spec-only units can be inferred too
     _mark_inferred(root, store, "total")
     assert api.status(root, store)["inferred"] == ["Item", "total"]
+
+
+def test_get_dependents_unknown_contract_errors(project):
+    root, store = project
+    with pytest.raises(HashloomError) as exc:
+        api.get_dependents(root, store, "Itme")
+    assert exc.value.code == "unknown_contract"
+    assert "nearest: 'Item'" in exc.value.message
+
+
+def test_put_contract_with_missing_impl_file_lands_and_goes_dirty(project):
+    root, store = project
+    # an unhashable impl is swallowed (hash None), not raised — the contract
+    # lands and `status` reports it dirty instead of put_contract failing
+    out = api.put_contract(root, store, "ghost", """\
+name: ghost
+signature: "() -> int"
+impl: src/ghost.py::ghost
+""")
+    assert out["name"] == "ghost"
+    assert "ghost" in api.status(root, store)["dirty"]
+
+
+def test_status_marks_dirty_when_toolchain_unresolvable(project, monkeypatch):
+    root, store = project
+    from hashloom.langs.python import PythonAdapter
+
+    def no_toolchain(self, root, override=None):
+        raise HashloomError("bad_toolchain", "no interpreter anywhere")
+
+    monkeypatch.setattr(PythonAdapter, "toolchain_identity", no_toolchain)
+    # can't resolve the toolchain -> can't claim a green, so impl-bearing
+    # contracts go dirty (Item is spec-only and stays clean)
+    assert set(api.status(root, store)["dirty"]) == {"report", "total"}
+
+
+def test_verify_accepts_a_single_name_string(project):
+    root, store = project
+    result = api.verify(root, store, "total")
+    assert result["ok"] is True
+    assert [r["name"] for r in result["results"]] == ["total"]

@@ -41,7 +41,10 @@ jobs:
         run: uv sync --frozen --python ${{ matrix.python-version }}
       - name: Run tests
         # hash-stability suites are load-bearing; e2e spawns the real stdio server
-        run: uv run --python ${{ matrix.python-version }} pytest -q
+        # (measured too, via coverage's subprocess patching). The floor sits ~5
+        # points under what a full-toolchain run scores, so it catches regressions
+        # without tripping on minor per-version branch differences.
+        run: uv run --python ${{ matrix.python-version }} pytest -q --cov=hashloom --cov-report=term --cov-fail-under=85
 
   benchmark:
     name: benchmark (>5x DoD guard)
