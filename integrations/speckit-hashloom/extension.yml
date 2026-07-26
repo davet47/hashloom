@@ -1,0 +1,47 @@
+schema_version: "1.0"
+
+extension:
+  id: hashloom
+  name: "Hashloom Contract Gate"
+  version: "0.1.0"
+  description: "Contract cache-and-gate loop for spec-kit: draft seam contracts per feature, serve cached verification greens before implement, hard-gate with hashloom verify --radius after"
+  author: "davet47"
+  repository: https://github.com/davet47/hashloom
+  license: Apache-2.0
+
+requires:
+  speckit_version: ">=0.2.0"
+  tools:
+    - name: hashloom
+      required: true
+
+provides:
+  commands:
+    - name: speckit.hashloom.seams
+      file: commands/speckit.hashloom.seams.md
+      description: "Draft hashloom contracts (status: inferred) for the feature's stable seams and register them for gating"
+    - name: speckit.hashloom.gate
+      file: commands/speckit.hashloom.gate.md
+      description: "Verify the feature's seams through the hashloom cache: cached-green precheck before implementation, hard verify --radius gate after"
+
+# No `condition:` on either hook — spec-kit's implement command skips
+# conditioned hooks entirely rather than evaluating them.
+hooks:
+  before_implement:
+    command: speckit.hashloom.gate
+    priority: 10
+    optional: false
+    description: "Check the hashloom cache for the feature's seams; tasks whose units are already cached-pass are marked complete instead of re-implemented"
+  after_implement:
+    command: speckit.hashloom.gate
+    # below default priority so the gate precedes other extensions'
+    # after-hooks (e.g. a git auto-commit at 10) — red code stays uncommitted
+    priority: 5
+    optional: false
+    description: "Hard gate: hashloom verify --radius over the feature's seams must return ok before implementation is complete"
+
+tags:
+  - "verification"
+  - "contracts"
+  - "caching"
+  - "testing"
