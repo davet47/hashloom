@@ -3,11 +3,11 @@
 Each adapter knows how to, for one language: hash an implementation's normalised
 AST, hash a test's source, read impl source for the content-addressed blob,
 resolve the language's toolchain, and run tests. Python is the default; Go,
-TypeScript, and Java are the non-Python adapters.
+TypeScript, Java, and C# are the non-Python adapters.
 
 The adapter is chosen by the impl file's extension (`adapter_for`), so contracts
 gain no new syntax: a `.go` impl routes to Go, `.ts`/`.tsx`/`.mts`/`.cts` to
-TypeScript, `.java` to Java, everything else to Python.
+TypeScript, `.java` to Java, `.cs` to C#, everything else to Python.
 """
 
 from __future__ import annotations
@@ -34,11 +34,12 @@ _PYTHON: LanguageAdapter | None = None
 _GO: LanguageAdapter | None = None
 _TS: LanguageAdapter | None = None
 _JAVA: LanguageAdapter | None = None
+_CSHARP: LanguageAdapter | None = None
 
 
 def adapter_for(impl: str) -> LanguageAdapter:
     """Pick the adapter by the impl file's extension; default to Python."""
-    global _PYTHON, _GO, _TS, _JAVA
+    global _PYTHON, _GO, _TS, _JAVA, _CSHARP
     path = impl.partition("::")[0]
     if path.endswith(".go"):
         if _GO is None:
@@ -58,6 +59,12 @@ def adapter_for(impl: str) -> LanguageAdapter:
 
             _JAVA = JavaAdapter()
         return _JAVA
+    if path.endswith(".cs"):
+        if _CSHARP is None:
+            from .csharp import CSharpAdapter
+
+            _CSHARP = CSharpAdapter()
+        return _CSHARP
     if _PYTHON is None:
         from .python import PythonAdapter
 

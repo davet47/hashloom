@@ -2,7 +2,7 @@ name: LanguageAdapter
 signature: "Protocol: per-language impl/test-source hashing, toolchain resolution, and test running — six methods, one adapter per impl extension"
 deps: [HashloomError]
 invariants:
-  - adapter_for routes on the impl path's extension (.go, .ts/.tsx/.mts/.cts, .java) with Python as the default — one lazy singleton per language, no new contract syntax
+  - adapter_for routes on the impl path's extension (.go, .ts/.tsx/.mts/.cts, .java, .cs) with Python as the default — one lazy singleton per language, no new contract syntax
   - impl_hash is formatting/comment/doc-neutral and behaviour-sensitive; a missing file or name raises impl_not_found, unparseable source impl_syntax_error
   - test_source_hash never raises — unresolvable node ids degrade to their literal id, and node-id order never changes the hash
   - "toolchains resolve per language (override, then the .hashloom/config.json key, then PATH/auto-detect) and identities are machine-independent strings: the toolchain version plus, when a well-known lockfile/manifest exists at the project root, a ` deps <file>=<sha256-12>` suffix over its CRLF-normalised bytes — never OS/arch, so cross-OS greens share whenever the committed dependency set matches; a project with no dependency source keeps the version-only identity, so absence never busts keys"
@@ -14,5 +14,4 @@ tests:
   - tests/test_dep_identity.py::test_bare_root_identity_is_byte_identical_to_version_only
   - tests/test_dep_identity.py::test_python_identity_gains_dep_suffix
 impl: src/hashloom/langs/__init__.py::LanguageAdapter
-status: confirmed
-
+status: inferred

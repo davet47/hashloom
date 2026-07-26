@@ -102,7 +102,8 @@ impl extension: a `.go` impl uses `go` (`.hashloom/config.json` → `"go"`); a
 and auto-detects the test runner (vitest / jest, else Node's `node:test`); a
 `.java` impl uses `java` (→ `"java"`, JDK >= 11) and auto-detects the runner from
 the build manifest (`pom.xml` → Maven, `build.gradle` → Gradle, committed
-`mvnw`/`gradlew` wrappers preferred).
+`mvnw`/`gradlew` wrappers preferred); a `.cs` impl uses `dotnet` (→ `"dotnet"`,
+.NET SDK >= 8) and runs `dotnet test` on the root project/solution.
 
 ## How to run
 
@@ -117,4 +118,6 @@ hash-stability rules are enforced, not just documented. Keep it green.
 Python >=3.10. Deps: mcp, pyyaml, tiktoken, pytest. TypeScript contracts also
 need Node >=22.6 and the project's own `typescript` (CI installs a repo-local one
 via `npm ci`; `node_modules/` is gitignored). Java contracts need a JDK >=11 plus
-Maven or Gradle (CI installs Temurin; Maven ships on the runner).
+Maven or Gradle (CI installs Temurin; Maven ships on the runner). C# contracts
+need the .NET SDK >=8 (CI installs 9; the Roslyn hash helper compiles from the
+SDK's own toolchain, no packages).
