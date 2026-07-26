@@ -6,7 +6,13 @@ cached verification instead of raw files. Drop the finished gif at the top of th
 README, under the CI badge.
 
 **Target:** ~25–35 s, silent with captions, looping. Terminal ~100×30, large
-font. Record with any screen recorder → `gifski` or `ffmpeg` for the gif.
+font.
+
+**The gif is generated, not screen-recorded**: `uv run --with pillow python
+docs/make_demo_gif.py` renders every scene below and writes `docs/demo.gif`.
+When the numbers drift (benchmark table, packet tokens), refresh the constants
+in that script from a real `bench/benchmark.py` run and a real `get_contract`
+packet, then regenerate.
 
 ## Setup (off-camera)
 
