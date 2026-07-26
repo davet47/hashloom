@@ -36,9 +36,11 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
   publishes require the publish token — CI writes greens, a laptop with the
   read token only consumes. A single token still grants both roles, so existing
   deployments are unchanged. Per-project/team tokens remain deferred.
-- **Concurrent writers** — the cache server is single-threaded-serialised;
-  real teams need atomic verdict/blob writes under concurrency (CAS or
-  equivalent), not politeness.
+- **Concurrent writers** — ✓ **Shipped** (unreleased): the cache server is a
+  `ThreadingHTTPServer` with a lock-serialised sqlite connection, and verdict
+  publishes are first-writer-wins on the verification key — a duplicate
+  publish is a no-op, never a `ran_at` refresh or `stale` reset. WAL +
+  per-thread connections remain the documented throughput follow-up.
 - **Cross-graph invalidation** — a shared green is keyed by content hashes, but
   nothing yet propagates "this contract changed upstream" across clients whose
   local graphs disagree.

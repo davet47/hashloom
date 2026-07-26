@@ -18,11 +18,14 @@ as a separate operational process:
 
     python -m hashloom.cache_server --db cache.db --token SECRET [--publish-token SECRET2] [--host H --port P]
 
-Single-threaded by design: a `SqliteStore` holds one sqlite connection (not
-thread-safe), and the verdict/blob writes are idempotent upserts, so
-last-writer-wins is fine for the MVP. A future throughput upgrade is
-`ThreadingHTTPServer` + a per-thread or lock-guarded connection; CAS and
-concurrent-writer ordering are deferred (docs/hosted-store.md #4).
+Threaded requests, serialised storage: a `ThreadingHTTPServer` handles
+network IO and JSON concurrently, while one `threading.Lock` guards the
+single sqlite connection — so every db write stays a serialised
+single-statement commit, exactly the semantics the store comment promises.
+Verdict publishes are first-writer-wins (`CacheStore`): duplicates of a
+bit-identical run are no-ops, never a `ran_at` refresh or a `stale` reset.
+The future throughput upgrade, if a team ever saturates the lock, is WAL +
+per-thread connections + bounded busy-retry (docs/hosted-store.md #4).
 """
 
 from __future__ import annotations
@@ -32,16 +35,42 @@ import hmac
 import json
 import os
 import sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote
 
-from .store import SqliteStore
+from .store import SqliteStore, _now
 
 DEFAULT_PORT = 8770
 
 
-class CacheServer(HTTPServer):
-    """An HTTPServer that holds the store and expected token(s) for the handler."""
+class CacheStore(SqliteStore):
+    """The server's store: verdict publishes are first-writer-wins.
+
+    Two publishes for one verification key are independent runs of a
+    bit-identical closure (the key hashes contract, impl, test source,
+    toolchain, and the dep closure), so a duplicate must not refresh
+    `ran_at` — the verdict is as old as the run that produced it — and must
+    not reset `stale`, or a duplicate publish could un-stale a row that
+    cross-graph invalidation just marked, serving a stale green to the whole
+    team. Blobs are content-addressed INSERT OR IGNORE already.
+    """
+
+    def record_verification(self, key: str, contract_name: str, status: str, summary: str) -> None:
+        self._conn.execute(
+            "INSERT INTO verifications(key, contract_name, status, summary, ran_at, stale) "
+            "VALUES(?,?,?,?,?,0) ON CONFLICT(key) DO NOTHING",
+            (key, contract_name, status, summary, _now()),
+        )
+        self._conn.commit()
+
+
+class CacheServer(ThreadingHTTPServer):
+    """A threaded server holding the store, its lock, and the token(s)."""
+
+    # join in-flight request threads in server_close(), so `serve()` may
+    # close the store immediately after without a use-after-close
+    daemon_threads = False
 
     def __init__(
         self,
@@ -52,6 +81,7 @@ class CacheServer(HTTPServer):
     ):
         super().__init__(addr, _Handler)
         self.store = store
+        self.store_lock = threading.Lock()  # one connection, serialised db work
         self.token = token
         self.publish_token = publish_token  # None -> `token` gates both verbs
 
@@ -111,25 +141,39 @@ class _Handler(BaseHTTPRequestHandler):
     # -- routes -------------------------------------------------------------
 
     def do_GET(self) -> None:
+        try:
+            self._handle_get()
+        except Exception as e:  # noqa: BLE001 — never leak a stack trace to a client
+            self._error(500, "internal", f"{type(e).__name__}: {e}")
+
+    def do_POST(self) -> None:
+        try:
+            self._handle_post()
+        except Exception as e:  # noqa: BLE001 — never leak a stack trace to a client
+            self._error(500, "internal", f"{type(e).__name__}: {e}")
+
+    def _handle_get(self) -> None:
         if not self._authed():
             return self._error(401, "unauthorized", "missing or invalid bearer token")
-        store = self.server.store
+        store, lock = self.server.store, self.server.store_lock
         if self.path.startswith("/verification/"):
-            row = store.get_verification(unquote(self.path[len("/verification/"):]))
+            with lock:
+                row = store.get_verification(unquote(self.path[len("/verification/"):]))
             return self._send(200, row) if row is not None else self._error(404, "not_found", "no such verdict")
         if self.path.startswith("/blob/"):
-            content = store.get_blob(unquote(self.path[len("/blob/"):]))
+            with lock:
+                content = store.get_blob(unquote(self.path[len("/blob/"):]))
             return self._send(200, {"content": content}) if content is not None else self._error(404, "not_found", "no such blob")
         return self._error(404, "not_found", "unknown route")
 
-    def do_POST(self) -> None:
+    def _handle_post(self) -> None:
         if not self._authed(publish=True):
             # a valid read token on a publish route is a scope problem, not an
             # identity problem — tell the client which one it has
             if self._authed():
                 return self._error(403, "read_only", "publishing requires the publish token")
             return self._error(401, "unauthorized", "missing or invalid bearer token")
-        store = self.server.store
+        store, lock = self.server.store, self.server.store_lock
         body = self._read_body()
         if not isinstance(body, dict):
             return self._error(400, "bad_request", "expected a JSON object body")
@@ -140,13 +184,16 @@ class _Handler(BaseHTTPRequestHandler):
                 return self._error(400, "bad_request", "missing key/contract_name/status")
             if status != "pass":
                 return self._error(400, "only_greens", "the shared cache stores passes only")
-            store.record_verification(key, name, status, body.get("summary", ""))
+            with lock:
+                store.record_verification(key, name, status, body.get("summary", ""))
             return self._send(204)
         if self.path == "/blob":
             content = body.get("content")
             if not isinstance(content, str):
                 return self._error(400, "bad_request", "blob content must be a string")
-            return self._send(200, {"hash": store.put_blob(content)})
+            with lock:
+                blob_hash = store.put_blob(content)
+            return self._send(200, {"hash": blob_hash})
         return self._error(404, "not_found", "unknown route")
 
 
@@ -157,7 +204,7 @@ def serve(
     port: int = DEFAULT_PORT,
     publish_token: str | None = None,
 ) -> None:
-    store = SqliteStore(db, check_same_thread=False)  # used on the serve_forever thread
+    store = CacheStore(db, check_same_thread=False)  # request threads serialise via store_lock
     httpd = CacheServer((host, port), store, token, publish_token=publish_token)
     print(f"hashloom cache server on http://{host}:{httpd.server_address[1]}  (db: {db})", file=sys.stderr)
     try:

@@ -6,6 +6,18 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- Cache server concurrency (v0.5 theme, item 2): `python -m
+  hashloom.cache_server` is now a `ThreadingHTTPServer` — requests are
+  handled concurrently while one lock serialises the sqlite connection, so
+  every write stays an atomic single-statement commit. Verdict publishes
+  are **first-writer-wins** on the verification key: a duplicate publish
+  (a re-run of a bit-identical closure) is a no-op instead of refreshing
+  `ran_at` and resetting `stale` — freshness stays honest, and a duplicate
+  can never resurrect a row that future cross-graph invalidation marks
+  stale. Unexpected handler errors now return structured JSON 500s instead
+  of bare stack traces. Wire protocol unchanged; clients need no update.
+
 ### Added
 - Cache-server auth scoping (v0.5 theme, item 1): `python -m
   hashloom.cache_server` takes an optional `--publish-token` (or

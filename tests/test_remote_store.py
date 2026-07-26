@@ -10,12 +10,13 @@ import textwrap
 import threading
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 
 from hashloom import api
-from hashloom.cache_server import CacheServer
+from hashloom.cache_server import CacheServer, CacheStore
 from hashloom.config import resolve_shared_store
 from hashloom.errors import HashloomError
 from hashloom.indexer import index
@@ -49,7 +50,7 @@ def _make_project(root: Path) -> None:
 @pytest.fixture
 def cache(tmp_path):
     """A running cache_server on an ephemeral port; yields (base_url, token)."""
-    store = SqliteStore(tmp_path / "cache.db", check_same_thread=False)
+    store = CacheStore(tmp_path / "cache.db", check_same_thread=False)
     httpd = CacheServer(("127.0.0.1", 0), store, _TOKEN)
     port = httpd.server_address[1]
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -169,7 +170,7 @@ _PUBLISH_TOKEN = "publish-token"
 @pytest.fixture
 def scoped_cache(tmp_path):
     """A cache_server with split read/publish tokens; yields (base_url, server_store)."""
-    store = SqliteStore(tmp_path / "cache.db", check_same_thread=False)
+    store = CacheStore(tmp_path / "cache.db", check_same_thread=False)
     httpd = CacheServer(("127.0.0.1", 0), store, _TOKEN, publish_token=_PUBLISH_TOKEN)
     port = httpd.server_address[1]
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -256,6 +257,83 @@ def test_publish_false_client_skips_posts_entirely(cache, tmp_path):
     blob_hash = local.get_impl("total")["blob_hash"]
     assert RemoteStore(base, token).get_blob(blob_hash) is None  # blobs suppressed too
     local.close()
+
+
+# -- concurrent writers: threaded server, first-writer-wins verdicts --------
+
+
+def _raw_body(method: str, base: str, token: str, path: str, body: dict | None = None) -> tuple[int, str]:
+    """Like _raw, but also returns the response body text."""
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    req = urllib.request.Request(base + path, data=data, method=method)
+    req.add_header("Authorization", f"Bearer {token}")
+    if data is not None:
+        req.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return resp.status, resp.read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8")
+
+
+def _publish(base: str, token: str, key: str, summary: str = "") -> int:
+    return _raw("POST", base, token, "/verification",
+                {"key": key, "contract_name": "c", "status": "pass", "summary": summary})
+
+
+def test_duplicate_publish_is_first_writer_wins(scoped_cache):
+    base, store = scoped_cache
+    assert _publish(base, _PUBLISH_TOKEN, "k1", summary="first") == 204
+    first = store.get_verification("k1")
+    assert _publish(base, _PUBLISH_TOKEN, "k1", summary="second") == 204
+    after = store.get_verification("k1")
+    assert after["summary"] == "first"        # the duplicate was a no-op
+    assert after["ran_at"] == first["ran_at"]  # freshness stays honest
+
+
+def test_duplicate_publish_does_not_unstale(scoped_cache):
+    base, store = scoped_cache
+    assert _publish(base, _PUBLISH_TOKEN, "k2") == 204
+    assert store.mark_stale(["c"]) == 1
+    # the race cross-graph invalidation would hit: a duplicate publish must
+    # not resurrect a row that was just marked stale
+    assert _publish(base, _PUBLISH_TOKEN, "k2") == 204
+    assert store.get_verification("k2")["stale"] == 1
+
+
+def test_concurrent_publish_and_read_storm(scoped_cache):
+    base, store = scoped_cache
+    shared_key = "shared-key"
+
+    def worker(i: int) -> list[int]:
+        return [
+            _publish(base, _PUBLISH_TOKEN, f"key-{i}"),
+            _publish(base, _PUBLISH_TOKEN, shared_key, summary=f"w{i}"),
+            _raw("GET", base, _TOKEN, f"/verification/key-{i}"),
+            _raw("POST", base, _PUBLISH_TOKEN, "/blob", {"content": f"content-{i % 3}"}),
+        ]
+
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        results = list(ex.map(worker, range(16)))
+    for codes in results:
+        assert codes == [204, 204, 200, 200]  # no 5xx anywhere in the storm
+    for i in range(16):
+        assert store.get_verification(f"key-{i}") is not None
+    # exactly one writer won the shared key, whole — never a blend
+    assert store.get_verification(shared_key)["summary"] in {f"w{i}" for i in range(16)}
+
+
+def test_unexpected_store_error_returns_structured_500(scoped_cache, monkeypatch):
+    base, store = scoped_cache
+
+    def boom(key):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(store, "get_verification", boom)
+    status, body = _raw_body("GET", base, _TOKEN, "/verification/x")
+    assert status == 500
+    assert json.loads(body)["error"]["code"] == "internal"
+    assert "Traceback" not in body
 
 
 def test_resolve_shared_store_validation(tmp_path):
