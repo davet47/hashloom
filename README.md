@@ -212,11 +212,16 @@ uv run pytest             # full suite; hash stability is the load-bearing suite
 uv run python bench/benchmark.py
 ```
 
-`integrations/` holds repo-only bootstrap tooling — currently an importer that
-drafts `status: inferred` contracts from a
+`integrations/` holds repo-only bootstrap tooling — an importer that drafts
+`status: inferred` contracts from a
 [graphify](https://github.com/Graphify-Labs/graphify) knowledge graph (see the
-[sales example](examples/sales/README.md) for the walkthrough). Tooling, not
-surface: nothing in it adds an MCP tool or CLI command.
+[sales example](examples/sales/README.md) for the walkthrough), and a
+[GitHub spec-kit](https://github.com/github/spec-kit) extension
+([`integrations/speckit-hashloom/`](integrations/speckit-hashloom/README.md))
+that wires the cache-and-gate loop into `/speckit.implement` — draft seam
+contracts per feature going in, `verify --radius` as the definition of done
+coming out. Tooling, not surface: nothing in it adds an MCP tool or CLI
+command.
 
 Kept deliberately small: 5 MCP tools, 5 CLI commands, contracts as plain YAML. Everything not in this README is an [issue](ISSUES.md).
 

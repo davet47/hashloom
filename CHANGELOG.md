@@ -7,6 +7,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `integrations/speckit-hashloom/` (#75): a [GitHub
+  spec-kit](https://github.com/github/spec-kit) extension — the greenfield
+  counterpart to the graphify importer. `/speckit.hashloom.seams` drafts
+  `status: inferred` contracts into the project's root `contracts/` plus a
+  per-feature `seams.txt` manifest; mandatory `before_implement` /
+  `after_implement` hooks run a gate script over `hashloom index` +
+  `verify --radius`, so cached greens skip tasks going in and the radius
+  gate decides done coming out. Repo-only tooling: no new MCP tools or CLI
+  commands. Spec-kit's extension API is pre-1.0; the manifest pins
+  `speckit_version >=0.2.0` and will track upstream once it stabilises.
 - `integrations/graphify_import.py` (#80, PR #81): draft `status: inferred`
   contracts from a [graphify](https://github.com/Graphify-Labs/graphify)
   knowledge graph — the brownfield entry point. Signatures come from the
