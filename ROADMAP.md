@@ -21,6 +21,12 @@
   (`examples/sales`, `examples/go-ledger`, `examples/ts-cart`); and hashloom
   developing hashloom — the repo's own stable seams under contract, reviewed and
   confirmed. No engine changes.
+- **v0.5** (0.5.0 → PyPI, 2026-07-26) — shared → hosted: scoped auth
+  (publish vs read tokens), a threaded cache server with first-writer-wins
+  verdicts, key-addressed revocation, and the declared dependency set in the
+  verification key; plus both contract generators (graphify import, the
+  spec-kit extension) and strict provenance mode. (v0.4 was the rename
+  release; Java, the fourth adapter, shipped in 0.3.2.)
 
 What follows is where it goes next. The deferred-by-design items live in
 [ISSUES.md](ISSUES.md) and the [issue tracker](https://github.com/davet47/hashloom/issues);
@@ -31,17 +37,17 @@ this is the prioritization.
 v0.2 made the cache shareable; v0.5 makes sharing it safe at team scale. The
 remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
 
-- **Auth scoping** — ✓ **Shipped** (unreleased): the cache server takes an
+- **Auth scoping** — ✓ **Shipped** (0.5.0): the cache server takes an
   optional `--publish-token`; reads accept either token (publish implies read),
   publishes require the publish token — CI writes greens, a laptop with the
   read token only consumes. A single token still grants both roles, so existing
   deployments are unchanged. Per-project/team tokens remain deferred.
-- **Concurrent writers** — ✓ **Shipped** (unreleased): the cache server is a
+- **Concurrent writers** — ✓ **Shipped** (0.5.0): the cache server is a
   `ThreadingHTTPServer` with a lock-serialised sqlite connection, and verdict
   publishes are first-writer-wins on the verification key — a duplicate
   publish is a no-op, never a `ran_at` refresh or `stale` reset. WAL +
   per-thread connections remain the documented throughput follow-up.
-- **Cross-graph invalidation** — ✓ **Shipped** (unreleased) as *key-addressed
+- **Cross-graph invalidation** — ✓ **Shipped** (0.5.0) as *key-addressed
   revocation*: analysis showed content-addressed keys already propagate
   contract changes across graphs (every dependent's key moves), so the
   graph-keyed shared `mark_stale` was deliberately not built. What shipped
@@ -50,7 +56,7 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
   their keys (with audit, restore, and name sweeps), and a revoked key stays
   stale under any publish. See docs/hosted-store.md item 5 for the full
   argument.
-- **Dependency set in the key** — ✓ **Shipped** (unreleased): the toolchain
+- **Dependency set in the key** — ✓ **Shipped** (0.5.0): the toolchain
   identity now carries a ` deps <file>=<sha256-12>` suffix over the project's
   committed dependency source (lockfile, or declared manifest as fallback),
   CRLF-normalised so cross-OS checkouts share. A green from a different
@@ -83,7 +89,7 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
   honestly; shrinking it (flakiness detection, an optional re-verify TTL, or
   marking tests untrusted-for-caching) is open design work, not yet scheduled.
 - **Strict provenance mode** ([#49](https://github.com/davet47/hashloom/issues/49))
-  — ✓ **Shipped** (unreleased): `.hashloom/config.json` `{"strict_provenance":
+  — ✓ **Shipped** (0.5.0): `.hashloom/config.json` `{"strict_provenance":
   true}` upgrades verify's inferred-contract warnings to structured refusals
   (`inferred_contract`); reads and writes stay advisory. Landed with no schema
   change, as designed.

@@ -6,6 +6,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-26
+
+**Shared → hosted.** The v0.5 theme lands whole: the shared verification
+cache is now safe at team scale — scoped auth (CI publishes, laptops
+consume), a threaded server with first-writer-wins verdicts, key-addressed
+revocation for greens that were wrong at publish time, and the declared
+dependency set folded into the verification key. Alongside the theme: both
+contract generators (graphify import, the spec-kit extension), strict
+provenance mode, and a CI-gated 90% coverage floor with honest subprocess
+measurement.
+
 ### Changed
 - Dependency set in the verification key (v0.5 theme, final item): the
   toolchain identity now appends ` deps <file>=<sha256-12>` when the project
