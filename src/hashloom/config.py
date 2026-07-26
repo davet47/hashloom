@@ -143,4 +143,7 @@ def resolve_shared_store(root: Path) -> dict | None:
         raise HashloomError("bad_config", "shared.url must be a non-empty string")
     if not isinstance(token, str) or not token:
         raise HashloomError("bad_config", "shared.token must be a non-empty string")
-    return {"url": url, "token": token}
+    publish = cfg.get("publish", True)  # false: read-only client, publishes are skipped
+    if not isinstance(publish, bool):
+        raise HashloomError("bad_config", f"shared.publish must be true or false, got {publish!r}")
+    return {"url": url, "token": token, "publish": publish}

@@ -169,9 +169,13 @@ every teammate's agent gets `cached-pass`:
 
 Run the backend anywhere with `python -m hashloom.cache_server` (a small
 bearer-token HTTP service over a SQLite store; an operational process, not a CLI
-command). Only greens are published — failures never cross the boundary — and the
-toolchain-in-key rule above keeps a shared green sound across machines. If the
-shared store is unreachable, verify degrades silently to local.
+command). Auth is scoped: give the server an optional `--publish-token` and only
+holders of it can write greens (CI publishes, laptops with the read token only
+consume; a single token still grants both roles, as before). A read-only client
+can set `"publish": false` to skip publish requests entirely. Only greens are
+published — failures never cross the boundary — and the toolchain-in-key rule
+above keeps a shared green sound across machines. If the shared store is
+unreachable, verify degrades silently to local.
 
 ## CLI
 

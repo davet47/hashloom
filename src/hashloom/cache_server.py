@@ -6,10 +6,17 @@ get/put a blob -- as a tiny JSON API behind a bearer token. A team points each
 developer's `.hashloom/config.json` `{"shared": {...}}` at one of these, so a unit
 verified green once is served to everyone (see docs/hosted-store.md).
 
+Auth is scoped by verb: GET is a read, POST is a publish. With only `--token`,
+that one token does both (the original single-token deployment). Add
+`--publish-token` to split the roles: reads accept either token (publish
+implies read), publishes require the publish token -- so CI writes greens and
+a laptop with the read token can only consume them. A read token on a publish
+route is 403 `read_only`; an unrecognized token is 401 `unauthorized`.
+
 It is intentionally NOT a `hashloom` subcommand (the 5-CLI surface is fixed); run it
 as a separate operational process:
 
-    python -m hashloom.cache_server --db cache.db --token SECRET [--host H --port P]
+    python -m hashloom.cache_server --db cache.db --token SECRET [--publish-token SECRET2] [--host H --port P]
 
 Single-threaded by design: a `SqliteStore` holds one sqlite connection (not
 thread-safe), and the verdict/blob writes are idempotent upserts, so
@@ -34,12 +41,19 @@ DEFAULT_PORT = 8770
 
 
 class CacheServer(HTTPServer):
-    """An HTTPServer that holds the store and expected token for the handler."""
+    """An HTTPServer that holds the store and expected token(s) for the handler."""
 
-    def __init__(self, addr: tuple[str, int], store: SqliteStore, token: str):
+    def __init__(
+        self,
+        addr: tuple[str, int],
+        store: SqliteStore,
+        token: str,
+        publish_token: str | None = None,
+    ):
         super().__init__(addr, _Handler)
         self.store = store
         self.token = token
+        self.publish_token = publish_token  # None -> `token` gates both verbs
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -60,12 +74,27 @@ class _Handler(BaseHTTPRequestHandler):
     def _error(self, status: int, code: str, message: str) -> None:
         self._send(status, {"error": {"code": code, "message": message}})
 
-    def _authed(self) -> bool:
+    def _presented(self) -> str | None:
         header = self.headers.get("Authorization", "")
         prefix = "Bearer "
-        if not header.startswith(prefix):
+        return header[len(prefix):] if header.startswith(prefix) else None
+
+    def _authed(self, publish: bool = False) -> bool:
+        """Constant-time check against the token(s) the verb accepts.
+
+        Reads accept the read token or the publish token (publish implies
+        read); publishes require the publish token when one is configured.
+        Both comparisons always run — no short-circuit string equality.
+        """
+        presented = self._presented()
+        if presented is None:
             return False
-        return hmac.compare_digest(header[len(prefix):], self.server.token)
+        is_read = hmac.compare_digest(presented, self.server.token)
+        pub = self.server.publish_token
+        is_publish = pub is not None and hmac.compare_digest(presented, pub)
+        if publish and pub is not None:
+            return is_publish
+        return is_read or is_publish
 
     def _read_body(self) -> dict | None:
         length = int(self.headers.get("Content-Length") or 0)
@@ -94,7 +123,11 @@ class _Handler(BaseHTTPRequestHandler):
         return self._error(404, "not_found", "unknown route")
 
     def do_POST(self) -> None:
-        if not self._authed():
+        if not self._authed(publish=True):
+            # a valid read token on a publish route is a scope problem, not an
+            # identity problem — tell the client which one it has
+            if self._authed():
+                return self._error(403, "read_only", "publishing requires the publish token")
             return self._error(401, "unauthorized", "missing or invalid bearer token")
         store = self.server.store
         body = self._read_body()
@@ -117,9 +150,15 @@ class _Handler(BaseHTTPRequestHandler):
         return self._error(404, "not_found", "unknown route")
 
 
-def serve(db: str, token: str, host: str = "127.0.0.1", port: int = DEFAULT_PORT) -> None:
+def serve(
+    db: str,
+    token: str,
+    host: str = "127.0.0.1",
+    port: int = DEFAULT_PORT,
+    publish_token: str | None = None,
+) -> None:
     store = SqliteStore(db, check_same_thread=False)  # used on the serve_forever thread
-    httpd = CacheServer((host, port), store, token)
+    httpd = CacheServer((host, port), store, token, publish_token=publish_token)
     print(f"hashloom cache server on http://{host}:{httpd.server_address[1]}  (db: {db})", file=sys.stderr)
     try:
         httpd.serve_forever()
@@ -141,12 +180,19 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--token",
         default=os.environ.get("HASHLOOM_CACHE_TOKEN"),
-        help="bearer token clients must present (or set HASHLOOM_CACHE_TOKEN)",
+        help="bearer token clients must present (or set HASHLOOM_CACHE_TOKEN); "
+        "with no --publish-token it grants reads and publishes both",
+    )
+    p.add_argument(
+        "--publish-token",
+        default=os.environ.get("HASHLOOM_CACHE_PUBLISH_TOKEN"),
+        help="optional second token required to publish (or set HASHLOOM_CACHE_PUBLISH_TOKEN); "
+        "when set, --token becomes read-only and this token grants reads and publishes",
     )
     args = p.parse_args(argv)
     if not args.token:
         p.error("a --token (or HASHLOOM_CACHE_TOKEN env var) is required; refusing to run an unauthenticated cache")
-    serve(args.db, args.token, host=args.host, port=args.port)
+    serve(args.db, args.token, host=args.host, port=args.port, publish_token=args.publish_token)
     return 0
 
 

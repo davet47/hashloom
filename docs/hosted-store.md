@@ -46,9 +46,15 @@ and `RemoteStore` makes the shared side an HTTP backend (item 1 below and
    shared-store outage degrades silently to local verify (the local path stays the
    default). Single-threaded for now; concurrency stays in #4. Server-side `ran_at`
    stamping (the server's own `SqliteStore`) already covers #6.
-2. **Auth** *(partially shipped)*. A single shared bearer token gates the server
-   (constant-time `hmac.compare_digest`). Still deferred: a *stronger* check on the
-   publish path than the read path, and per-project/team tokens.
+2. **Auth** *(read/publish split shipped)*. Bearer tokens gate the server
+   (constant-time `hmac.compare_digest`), and the roles are now split by verb:
+   `--token` grants reads; an optional `--publish-token` is required for the
+   publish routes (POST), and implies read. With only `--token`, that one token
+   does both — the original deployment shape, unchanged. A read token on a
+   publish route is 403 `read_only`; an unknown token is 401 `unauthorized`.
+   Clients can also declare themselves read-only (`"publish": false` in the
+   shared config) and skip publish requests entirely. Still deferred:
+   per-project/team tokens.
 3. ✓ **Trust: toolchain in the key (shipped).** A shared stale-green is worse than
    a solo one, which is why test source is already in the verification key (#18):
    a verdict is only as portable as its key is complete. The key now also folds in
@@ -76,14 +82,21 @@ The shared backend is an operational process, **not** a `hashloom` subcommand (t
 5-CLI surface is fixed):
 
 ```bash
-python -m hashloom.cache_server --db cache.db --token SECRET   # --host/--port optional
+python -m hashloom.cache_server --db cache.db --token READ_SECRET --publish-token CI_SECRET
 ```
 
 It refuses to start without a token (`--token` or `HASHLOOM_CACHE_TOKEN`) and binds
-`127.0.0.1` by default. Point each developer's `.hashloom/config.json` at it:
+`127.0.0.1` by default. `--publish-token` (or `HASHLOOM_CACHE_PUBLISH_TOKEN`) is
+optional — omit it and the one token grants both roles. CI gets the publish token;
+a developer laptop gets the read token and, optionally, opts out of doomed
+publish attempts:
 
 ```json
-{ "shared": { "url": "http://cache.host:8770", "token": "SECRET" } }
+{ "shared": { "url": "http://cache.host:8770", "token": "CI_SECRET" } }
+```
+
+```json
+{ "shared": { "url": "http://cache.host:8770", "token": "READ_SECRET", "publish": false } }
 ```
 
 Then `hashloom verify` (and the MCP `verify` tool) publish greens to, and read them
