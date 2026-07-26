@@ -77,7 +77,7 @@ and `RemoteStore` makes the shared side an HTTP backend (item 1 below and
    that residual class is what key-addressed revocation (#5) exists for.
    Known declared-grain leaks, filed in ISSUES: parent-pom/BOM and dynamic
    versions, `requirements.txt` `-r`/`-c` includes, `go.mod` local `replace`
-   directives.
+   directives, Gradle version catalogs (`gradle/libs.versions.toml`).
 4. ✓ **Concurrent writers (shipped).** The server is a `ThreadingHTTPServer`;
    requests are handled concurrently while one lock serialises the single
    sqlite connection, so every db write stays an atomic single-statement

@@ -46,9 +46,11 @@ def test_content_sensitivity(tmp_path):
     lock = tmp_path / "uv.lock"
     lock.write_text("a==1\n")
     first = dep_suffix(tmp_path, ("uv.lock",))
-    lock.write_text("a==2\n")
+    # different-LENGTH rewrites, so the memo's accepted same-size-same-tick
+    # grain (coarse mtime on Linux) can't serve a stale digest to this test
+    lock.write_text("a==2.0\n")
     assert dep_suffix(tmp_path, ("uv.lock",)) != first
-    lock.write_text("a==1\n")  # byte-identical rewrite -> same digest
+    lock.write_text("a==1\n")  # byte-identical revert -> same digest
     assert dep_suffix(tmp_path, ("uv.lock",)) == first
 
 

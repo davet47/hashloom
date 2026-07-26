@@ -66,8 +66,10 @@ workflow from [docs/getting-started.md](docs/getting-started.md) applies here:
 
 `tests/test_contract_hash.py` and `tests/test_implhash.py` are the spec. Cosmetic
 input changes — whitespace, key order, comments, docstrings, file relocation —
-must never change a hash; meaning changes (signature, invariant/example order)
-must. If you touch `contract.py` or `implhash.py`, these tests are the contract.
+must never change a hash; meaning changes (signature, example order/content)
+must. Invariant edits are deliberately hash-free (#19: invariants are docs, not
+machine obligations — the tests are the check). If you touch `contract.py` or
+`implhash.py`, these tests are the contract.
 Run `uv run pytest` (full suite) before declaring anything done.
 
 ## The store is derived
