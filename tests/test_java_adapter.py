@@ -174,10 +174,17 @@ def test_java_impl_syntax_error(tmp_path):
 
 
 @needs_jdk
-def test_java_toolchain_identity_is_version_only(tmp_path):
+def test_java_toolchain_identity_is_version_only_for_manifestless_root(tmp_path):
     ident = adapter_for(_IMPL).toolchain_identity(tmp_path)
     assert ident.startswith("java ")
     assert ident.split()[1][0].isdigit()
+
+
+@needs_jdk
+def test_java_identity_gains_dep_suffix_from_pom(tmp_path):
+    (tmp_path / "pom.xml").write_text("<project><groupId>x</groupId></project>\n")
+    ident = adapter_for(_IMPL).toolchain_identity(tmp_path)
+    assert " deps pom.xml=" in ident
 
 
 # -- runner detection + argument mapping (no JDK needed) ----------------------

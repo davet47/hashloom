@@ -55,15 +55,29 @@ and `RemoteStore` makes the shared side an HTTP backend (item 1 below and
    Clients can also declare themselves read-only (`"publish": false` in the
    shared config) and skip publish requests entirely. Still deferred:
    per-project/team tokens.
-3. ✓ **Trust: toolchain in the key (shipped).** A shared stale-green is worse than
-   a solo one, which is why test source is already in the verification key (#18):
-   a verdict is only as portable as its key is complete. The key now also folds in
-   a **toolchain identity** (`LanguageAdapter.toolchain_identity()` — `python
-   3.11.7` / `go 1.21.5` / `node <v> ts <v>`), so a cross-machine green is trusted
-   only when the toolchain version matches; otherwise the key differs and the test
-   re-runs. Grain is **version-only** (no OS/arch) so a CI(Linux) green still serves
-   a dev on Mac/Windows. Not yet in the identity: the dependency set (pip freeze /
-   lockfile) and OS/arch — a deeper soundness knob if cross-platform drift bites.
+3. ✓ **Trust: toolchain + dependency set in the key (shipped).** A shared
+   stale-green is worse than a solo one, which is why test source is already in
+   the verification key (#18): a verdict is only as portable as its key is
+   complete. The key folds in a **toolchain identity**
+   (`LanguageAdapter.toolchain_identity()`): the toolchain version (`python
+   3.11.7` / `go 1.21.5` / `node <v> ts <v>` / `java 21.0.3`) plus, when the
+   project commits a dependency source at its root, a
+   `` deps <file>=<sha256-12>`` suffix over its CRLF-normalised bytes —
+   `uv.lock` / `poetry.lock` / `Pipfile.lock` / `pdm.lock` /
+   `requirements.txt` for Python, `go.sum` for Go, the npm/pnpm/yarn/bun
+   locks for TypeScript, `gradle.lockfile` / `pom.xml` / `build.gradle(.kts)`
+   for Java. A green from an environment with a different declared dependency
+   set is not trusted; a project with no dependency source keeps the
+   version-only identity, so nothing busts for it. Grain is the **committed
+   declared set, never OS/arch** — a deliberate decision, recorded here where
+   version-only was originally chosen: the lockfile is platform-invariant, so
+   a CI(Linux) green still serves a dev on Mac/Windows whenever the checkout
+   matches. Still not in the identity: OS/arch and installed-env drift
+   (platform wheels, env markers, a venv that disagrees with its lockfile) —
+   that residual class is what key-addressed revocation (#5) exists for.
+   Known declared-grain leaks, filed in ISSUES: parent-pom/BOM and dynamic
+   versions, `requirements.txt` `-r`/`-c` includes, `go.mod` local `replace`
+   directives.
 4. ✓ **Concurrent writers (shipped).** The server is a `ThreadingHTTPServer`;
    requests are handled concurrently while one lock serialises the single
    sqlite connection, so every db write stays an atomic single-statement
@@ -112,7 +126,8 @@ and `RemoteStore` makes the shared side an HTTP backend (item 1 below and
    counter-evidence revocation (client fails where the cache is green) is
    deliberately deferred: toolchain identity is version-only, so one
    broken-env laptop could tombstone keys green for everyone else —
-   revisit once the dependency set enters the key.
+   revisit now that the declared dependency set is in the key (#3) — the
+   false-contradiction class shrank to installed-env drift; see ISSUES.
 
    Revoking a green:
 

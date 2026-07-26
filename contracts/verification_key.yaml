@@ -3,10 +3,11 @@ signature: "(store: Store, name: str, ihash: str, thash: str, toolchain: str) ->
 deps: [Store, contract_hash, impl_hash, HashloomError]
 invariants:
   - sha256 over contract hash, impl hash, test-source hash, toolchain identity, and every transitive dep contract hash
-  - any change in the closure — or a toolchain version change — produces a new key
-  - a 3.11 green is never served to 3.13; cross-machine greens are sound only because the toolchain is in the key
+  - any change in the closure — or a toolchain identity change (toolchain version, or the declared dependency set) — produces a new key
+  - a 3.11 green is never served to 3.13, and a green from an environment with a different declared dependency set is not trusted; cross-machine greens are sound only because the toolchain identity is in the key
 tests:
   - tests/test_toolchain_key.py::test_verification_key_includes_the_toolchain
   - tests/test_toolchain_key.py::test_toolchain_change_busts_cache_and_status_agrees
+  - tests/test_dep_identity.py::test_dep_set_change_busts_cache_and_status_agrees
 impl: src/hashloom/verify.py::verification_key
 status: confirmed

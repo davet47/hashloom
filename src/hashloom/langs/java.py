@@ -27,6 +27,13 @@ from .. import tokens
 from ..config import load_config
 from ..errors import HashloomError
 from . import SUMMARY_MAX_TOKENS
+from .deps import dep_suffix
+
+# a real Gradle lockfile (the ecosystem's one true resolved set) wins; then the
+# declared manifests in the runner-probe order. Documented approximation:
+# parent-pom/BOM-inherited and dynamic versions escape the digest (false share
+# -> revocation's job); cosmetic pom edits bust once (false miss, conservative)
+_DEP_SOURCES = ("gradle.lockfile", "pom.xml", "build.gradle", "build.gradle.kts")
 
 _JAVAHASH = Path(__file__).parent / "javahash" / "JavaHash.java"
 _GRADLE_INIT = Path(__file__).parent / "hashloom-init.gradle"
@@ -73,21 +80,19 @@ class JavaAdapter:
 
     def toolchain_identity(self, root: Path, override: str | None = None) -> str:
         key = (str(root), override)
-        if key in self._id_cache:
-            return self._id_cache[key]
-        java = self._java(root, override)
-        try:
-            proc = subprocess.run(
-                [java, "--version"], capture_output=True, text=True, check=True, timeout=30
-            )
-        except (OSError, subprocess.SubprocessError):
-            raise HashloomError("bad_toolchain", f"could not read the Java version from '{java}'")
-        first = proc.stdout.strip().splitlines()[0] if proc.stdout.strip() else ""
-        m = _JAVA_VERSION.match(first)
-        # version only (drop vendor and build date) so cross-OS/vendor greens share
-        ident = f"java {m.group(1)}" if m else f"java {_oneline(first or proc.stdout)}"
-        self._id_cache[key] = ident
-        return ident
+        if key not in self._id_cache:
+            java = self._java(root, override)
+            try:
+                proc = subprocess.run(
+                    [java, "--version"], capture_output=True, text=True, check=True, timeout=30
+                )
+            except (OSError, subprocess.SubprocessError):
+                raise HashloomError("bad_toolchain", f"could not read the Java version from '{java}'")
+            first = proc.stdout.strip().splitlines()[0] if proc.stdout.strip() else ""
+            m = _JAVA_VERSION.match(first)
+            # version only (drop vendor and build date) so cross-OS/vendor greens share
+            self._id_cache[key] = f"java {m.group(1)}" if m else f"java {_oneline(first or proc.stdout)}"
+        return self._id_cache[key] + dep_suffix(root, _DEP_SOURCES)
 
     def _java_home(self, java: str) -> str | None:
         """The resolved JVM's own java.home, so Maven/Gradle run the same JDK
