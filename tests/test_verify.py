@@ -2,7 +2,13 @@
 changes anywhere in the dep closure bust the cache; failure summaries stay
 within the token budget."""
 
+import json
+
+import pytest
+
 from hashloom import api, tokens
+from hashloom.config import config_path, resolve_strict_provenance
+from hashloom.errors import HashloomError
 from hashloom.indexer import index
 from hashloom.verify import SUMMARY_MAX_TOKENS
 
@@ -200,6 +206,70 @@ def test_confirming_inferred_contract_keeps_cached_green(project):
     assert statuses(out) == {"total": "cached-pass", "report": "cached-pass"}
     assert store.counters()["test_runs"] == runs_before
     assert all("inferred" not in r for r in out["results"])
+
+
+def _strict_on(root) -> None:
+    config_path(root).write_text(json.dumps({"strict_provenance": True}), encoding="utf-8")
+
+
+def test_strict_provenance_refuses_inferred_unit(project):
+    root, store = project
+    text = (root / "contracts" / "total.yaml").read_text()
+    api.put_contract(root, store, "total", text + "status: inferred\n")
+    _strict_on(root)
+    out = api.verify(root, store, ["total"])
+    assert out["ok"] is False
+    r = out["results"][0]
+    assert r["status"] == "error"
+    assert r["error"]["code"] == "inferred_contract"
+    assert "total" in r["error"]["message"]
+    assert r["inferred"] == ["total"]
+    # refused before verify_one: no pytest ran, no verdict was cached
+    assert store.counters().get("test_runs", 0) == 0
+
+
+def test_strict_provenance_refuses_dependent_of_inferred(project):
+    root, store = project
+    text = (root / "contracts" / "total.yaml").read_text()
+    api.put_contract(root, store, "total", text + "status: inferred\n")
+    _strict_on(root)
+    # report is confirmed, but its closure rests on the unvetted total
+    out = api.verify(root, store, ["report"])
+    assert out["ok"] is False
+    assert out["results"][0]["error"]["code"] == "inferred_contract"
+    assert out["results"][0]["inferred"] == ["total"]
+
+
+def test_strict_refusal_preserves_cached_green(project):
+    root, store = project
+    assert statuses(api.verify(root, store, ["total"])) == {"total": "pass"}
+    runs_before = store.counters()["test_runs"]
+    text = (root / "contracts" / "total.yaml").read_text()
+    api.put_contract(root, store, "total", text + "status: inferred\n")
+    _strict_on(root)
+    assert api.verify(root, store, ["total"])["ok"] is False  # refused, not failed
+    # the review flip: the refusal wrote nothing, so the old green revives
+    api.put_contract(root, store, "total", text)
+    out = api.verify(root, store, ["total"])
+    assert statuses(out) == {"total": "cached-pass"}
+    assert store.counters()["test_runs"] == runs_before
+
+
+def test_strict_unknown_name_still_errors_as_unknown(project):
+    root, store = project
+    _strict_on(root)
+    out = api.verify(root, store, ["nope"])
+    assert out["ok"] is False
+    assert out["results"][0]["error"]["code"] == "unknown_contract"
+
+
+def test_strict_provenance_resolver_defaults_off_and_rejects_bad_values(project):
+    root, _ = project
+    assert resolve_strict_provenance(root) is False  # no key -> advisory as before
+    config_path(root).write_text(json.dumps({"strict_provenance": "yes"}), encoding="utf-8")
+    with pytest.raises(HashloomError) as exc:
+        resolve_strict_provenance(root)
+    assert exc.value.code == "bad_config"
 
 
 def test_status_reports_dirty_and_hit_rate(project):

@@ -67,9 +67,10 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
   honestly; shrinking it (flakiness detection, an optional re-verify TTL, or
   marking tests untrusted-for-caching) is open design work, not yet scheduled.
 - **Strict provenance mode** ([#49](https://github.com/davet47/hashloom/issues/49))
-  — an opt-in config that upgrades inferred-contract warnings to structured
-  refusals, for teams that want unvetted contracts to hard-fail. Deferred by
-  design; layerable with no schema change.
+  — ✓ **Shipped** (unreleased): `.hashloom/config.json` `{"strict_provenance":
+  true}` upgrades verify's inferred-contract warnings to structured refusals
+  (`inferred_contract`); reads and writes stay advisory. Landed with no schema
+  change, as designed.
 
 ## Bigger bets
 

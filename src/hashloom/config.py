@@ -115,6 +115,17 @@ def resolve_pycache_trust(root: Path, override: bool | None = None) -> bool:
     return value
 
 
+def resolve_strict_provenance(root: Path) -> bool:
+    """Whether verify refuses units whose closure contains inferred contracts
+    (default False — inferred stays advisory unless a team opts in)."""
+    value = load_config(root).get("strict_provenance")
+    if value is None:
+        return False
+    if not isinstance(value, bool):
+        raise HashloomError("bad_config", f"strict_provenance must be true or false, got {value!r}")
+    return value
+
+
 def resolve_shared_store(root: Path) -> dict | None:
     """Config for a shared/remote verification cache, or None if not configured.
 

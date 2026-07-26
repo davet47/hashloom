@@ -7,7 +7,7 @@ invariants:
   - the top-level ok is the gate — true iff every unit is green; errors and unknown names block
   - radius widens each name to itself plus every transitive dependent, spec-only units dropped, typos kept
   - failure summaries stay within the token budget, never a traceback
-  - inferred contracts anywhere in a unit's closure are named in its result, advisory only
+  - inferred contracts anywhere in a unit's closure are named in its result — advisory by default; with strict_provenance set, the unit refuses with inferred_contract instead of verifying, running no tests and writing no cache entry
 tests:
   - tests/test_verify.py::test_first_run_passes_then_caches
   - tests/test_verify.py::test_failures_are_not_served_from_cache
@@ -15,5 +15,7 @@ tests:
   - tests/test_verify.py::test_radius_verifies_the_blast_radius_in_one_call
   - tests/test_verify.py::test_verify_flags_inferred_closure_even_on_cached_pass
   - tests/test_verify.py::test_confirming_inferred_contract_keeps_cached_green
+  - tests/test_verify.py::test_strict_provenance_refuses_inferred_unit
+  - tests/test_verify.py::test_strict_refusal_preserves_cached_green
 impl: src/hashloom/api.py::verify
 status: confirmed

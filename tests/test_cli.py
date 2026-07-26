@@ -74,6 +74,21 @@ def test_verify_cli_outside_project_errors(tmp_path, monkeypatch, capsys):
     assert err["error"]["code"] == "no_project"
 
 
+def test_verify_cli_strict_provenance_refuses_with_exit_1(project, monkeypatch, capsys):
+    root, store = project
+    text = (root / "contracts" / "total.yaml").read_text()
+    (root / "contracts" / "total.yaml").write_text(text + "status: inferred\n")
+    from hashloom.indexer import index
+
+    index(root, store)
+    (root / ".hashloom" / "config.json").write_text('{"strict_provenance": true}')
+    monkeypatch.chdir(root)
+    rc = main(["verify", "total"])
+    out = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert out["results"][0]["error"]["code"] == "inferred_contract"
+
+
 def test_init_cli_creates_then_reports_already_initialised(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     assert main(["init"]) == 0

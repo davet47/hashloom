@@ -10,7 +10,7 @@ from pathlib import Path
 
 import yaml
 
-from .config import resolve_python
+from .config import resolve_python, resolve_strict_provenance
 from .contract import contract_hash, diff_contracts, parse_contract
 from .errors import HashloomError, unknown_name
 from .langs import adapter_for
@@ -175,16 +175,30 @@ def verify(
         names = _radius(store, names)
     if not pycache_trust:
         clear_pycache(root)  # once per batch, before any pytest run
+    strict = resolve_strict_provenance(root)
     results = []
     for name in names:
         try:
+            # computed here, not in verify_one: outside the cache key, so the flag
+            # reflects *current* status even when the verdict is a cached-pass
+            inferred = []
+            if store.get_contract(name) is not None:  # unknown names keep erroring as unknown_contract
+                inferred = [n for n in (name, *store.transitive_deps(name)) if _is_inferred(store, n)]
+            if strict and inferred:
+                # refuse before verify_one: no pytest runs, no cache entry is
+                # written, and any existing green survives for after the confirm
+                e = HashloomError(
+                    "inferred_contract",
+                    "strict provenance: verification rests on unvetted contracts: "
+                    f"{', '.join(inferred)} — review and confirm them (`hashloom status` lists the queue)",
+                    contract=name,
+                )
+                results.append({"name": name, "status": "error", "inferred": inferred, **e.to_dict()})
+                continue
             r = verify_one(root, store, name, python=python, timeout=timeout)
             r.pop("key")  # internal cache key — pure token weight to an agent
             if not r["summary"]:
                 r.pop("summary")
-            # computed here, not in verify_one: outside the cache key, so the flag
-            # reflects *current* status even when the verdict is a cached-pass
-            inferred = [n for n in (name, *store.transitive_deps(name)) if _is_inferred(store, n)]
             if inferred:
                 r["inferred"] = inferred
             results.append(r)

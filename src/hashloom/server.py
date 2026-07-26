@@ -70,7 +70,9 @@ def build_server(
         already green in the cache. `radius=true` widens each name to its full
         blast radius (itself plus every transitive dependent); the top-level
         `ok` is the hard pass/fail to gate on. An `inferred` list names any
-        unconfirmed contracts a verdict rests on."""
+        unconfirmed contracts a verdict rests on; with `strict_provenance`
+        set in .hashloom/config.json such units refuse (`inferred_contract`)
+        instead of verifying."""
         return _respond(
             "verify",
             lambda: api.verify(

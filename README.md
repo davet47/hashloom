@@ -100,7 +100,7 @@ A contract belongs on a stable seam: an interface other units depend on and that
 
 Contracts are reviewed artifacts. Authoring one is cheap and getting cheaper, so the real cost is reviewing it, not writing it. A wrong contract is worse than no contract, because the durable artifact now lies: agents will regenerate code to satisfy a spec that is itself incorrect. Review a contract the way you review an interface, not the way you skim generated code.
 
-A contract an agent reverse-engineers from existing code can declare that it hasn't earned that review yet: `status: inferred`. Tools then flag — never refuse — any blast-radius or verification answer that rests on it (`inferred: true` on dependents, an `inferred` list on verify results, a review queue in `status`). Absent means `confirmed`, and confirming an inferred contract after review is free: status is provenance, not meaning, so the flip invalidates nothing.
+A contract an agent reverse-engineers from existing code can declare that it hasn't earned that review yet: `status: inferred`. Tools then flag — by default, never refuse — any blast-radius or verification answer that rests on it (`inferred: true` on dependents, an `inferred` list on verify results, a review queue in `status`). Teams that want unvetted contracts to hard-fail can opt in to strict provenance mode (`.hashloom/config.json` → `{"strict_provenance": true}`): `verify` then refuses such units with a structured `inferred_contract` error — no tests run, no verdict cached — until they're reviewed; reads and writes stay advisory so drafts can still land and be inspected. Absent means `confirmed`, and confirming an inferred contract after review is free: status is provenance, not meaning, so the flip invalidates nothing (under strict mode, a pre-existing green simply revives on confirm).
 
 ### Hashing semantics
 
@@ -115,7 +115,7 @@ A contract an agent reverse-engineers from existing code can declare that it has
 | `get_contract` | the ~300-token context packet: contract + hash + one-line dep signatures + caller list |
 | `put_contract` | validate, write `contracts/<name>.yaml`, return new hash, a semantic diff of what changed, and every invalidated dependent |
 | `get_dependents` | blast-radius query, direct or transitive, names + hashes; inferred (unreviewed) contracts flagged |
-| `verify` | per-unit `cached-pass` / `pass` / `fail` plus a top-level `ok` gate bit; `radius=true` widens each name to its full blast radius; runs tests only on cache misses; failures come back as a ≤40-token assertion summary, never a traceback; inferred contracts in the closure flagged |
+| `verify` | per-unit `cached-pass` / `pass` / `fail` plus a top-level `ok` gate bit; `radius=true` widens each name to its full blast radius; runs tests only on cache misses; failures come back as a ≤40-token assertion summary, never a traceback; inferred contracts in the closure flagged (refused under strict provenance mode) |
 | `status` | dirty contracts, stale verifications, cache hit-rate, resolved verify interpreter, cumulative token counters |
 
 Every tool returns structured errors — `{"error": {"code": "unknown_dep", "message": "'Regoin' not found — nearest: 'Region'"}}` — never a stack trace.
@@ -129,10 +129,11 @@ globally-installed hashloom can verify a project against its own virtualenv with
 being installed into it; `hashloom status` shows which interpreter it resolved.
 
 `.hashloom/config.json` also takes `verify_timeout` (seconds per pytest run,
-default 300) for suites that need longer than the default, and `pycache_trust`
+default 300) for suites that need longer than the default, `pycache_trust`
 (default `true`); set `pycache_trust: false` — or pass `--no-pycache-trust` — to
 clear the project's `__pycache__` before each verify run, so a stale `.pyc` can
-never shadow the current source.
+never shadow the current source, and `strict_provenance` (default `false`) to
+make `verify` refuse units whose closure contains inferred contracts.
 
 ### Beyond Python
 
