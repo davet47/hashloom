@@ -1,8 +1,9 @@
 """The hashloom shared verification-cache server.
 
-A minimal stdlib HTTP server wrapping one `SqliteStore`, exposing exactly the four
+A minimal stdlib HTTP server wrapping one `SqliteStore`, exposing the four
 team-portable Store operations `LayeredStore` needs -- get/record a verdict,
-get/put a blob -- as a tiny JSON API behind a bearer token. A team points each
+get/put a blob -- plus the operator-facing revocation routes, as a tiny JSON
+API behind a bearer token. A team points each
 developer's `.hashloom/config.json` `{"shared": {...}}` at one of these, so a unit
 verified green once is served to everyone (see docs/hosted-store.md).
 
@@ -12,6 +13,16 @@ that one token does both (the original single-token deployment). Add
 implies read), publishes require the publish token -- so CI writes greens and
 a laptop with the read token can only consume them. A read token on a publish
 route is 403 `read_only`; an unrecognized token is 401 `unauthorized`.
+
+Routes: GET /verification/<key>, GET /blob/<hash>, GET /stale (the revocation
+audit listing), POST /verification, POST /blob, and POST /stale -- key-addressed
+revocation for greens that were wrong at publish time (flaky passes, env drift
+the verification key cannot see). Body: {"keys": [...], "names": [...],
+"stale": true|false, "reason": "..."}; names resolve server-side to their
+EXISTING keys. The response's `premarked` counts keys tombstoned ahead of
+any publish (no row yet — not a failed mark). Revoked keys stay stale under
+any publish; {"stale": false} (keys only) is the only restore path. See
+docs/hosted-store.md for the runbook.
 
 It is intentionally NOT a `hashloom` subcommand (the 5-CLI surface is fixed); run it
 as a separate operational process:
@@ -42,27 +53,109 @@ from urllib.parse import unquote
 from .store import SqliteStore, _now
 
 DEFAULT_PORT = 8770
+MAX_STALE_SELECTORS = 1000  # per request: keys given, names given, and keys resolved
+SQL_CHUNK = 500  # stay under every SQLite build's host-variable limit (999 pre-3.32)
+
+
+def _chunks(items: list[str], size: int = SQL_CHUNK):
+    for i in range(0, len(items), size):
+        yield items[i:i + size]
 
 
 class CacheStore(SqliteStore):
-    """The server's store: verdict publishes are first-writer-wins.
+    """The server's store: first-writer-wins publishes, revocable verdicts.
 
     Two publishes for one verification key are independent runs of a
     bit-identical closure (the key hashes contract, impl, test source,
     toolchain, and the dep closure), so a duplicate must not refresh
     `ran_at` — the verdict is as old as the run that produced it — and must
-    not reset `stale`, or a duplicate publish could un-stale a row that
-    cross-graph invalidation just marked, serving a stale green to the whole
-    team. Blobs are content-addressed INSERT OR IGNORE already.
+    not reset `stale`. Blobs are content-addressed INSERT OR IGNORE already.
+
+    Revocation (`mark_stale_keys`) tombstones keys whose green was wrong at
+    publish time — a flaky pass, env drift the toolchain identity misses. A
+    revoked key stays stale under ANY publish, duplicate or fresh (the
+    `stale_marks` EXISTS clause below covers the mark-before-publish
+    ordering; DO NOTHING covers the rest). The only un-stale path is an
+    explicit authenticated restore — an operator action, not the
+    publish-resurrection race first-writer-wins closed. Restore is
+    key-addressed only, and tombstone audit records are first-reason-wins,
+    so a later name sweep can neither rewrite why a key was originally
+    revoked nor lift tombstones it did not create.
     """
+
+    def __init__(self, db_path, check_same_thread: bool = True):
+        super().__init__(db_path, check_same_thread=check_same_thread)
+        # server-only audit table; IF NOT EXISTS doubles as the migration
+        self._conn.execute(
+            "CREATE TABLE IF NOT EXISTS stale_marks("
+            "key TEXT PRIMARY KEY, reason TEXT NOT NULL DEFAULT '', marked_at TEXT NOT NULL)"
+        )
+        self._conn.commit()
 
     def record_verification(self, key: str, contract_name: str, status: str, summary: str) -> None:
         self._conn.execute(
             "INSERT INTO verifications(key, contract_name, status, summary, ran_at, stale) "
-            "VALUES(?,?,?,?,?,0) ON CONFLICT(key) DO NOTHING",
-            (key, contract_name, status, summary, _now()),
+            "VALUES(?,?,?,?,?, EXISTS(SELECT 1 FROM stale_marks WHERE key=?)) "
+            "ON CONFLICT(key) DO NOTHING",
+            (key, contract_name, status, summary, _now(), key),
         )
         self._conn.commit()
+
+    def keys_for_names(self, names: list[str]) -> list[str]:
+        """The EXISTING keys recorded under these contract names — a name
+        sweep marks what is, never what will be (future keys land fresh)."""
+        out: list[str] = []
+        for chunk in _chunks(names):
+            rows = self._conn.execute(
+                f"SELECT key FROM verifications WHERE contract_name IN ({','.join('?' * len(chunk))})",
+                chunk,
+            )
+            out.extend(r["key"] for r in rows)
+        return out
+
+    def mark_stale_keys(self, keys: list[str], stale: bool = True, reason: str = "") -> int:
+        if not keys:
+            return 0
+        marked = 0
+        try:
+            if stale:
+                marked_at = _now()
+                for chunk in _chunks(keys):
+                    # first reason wins: a key already revoked keeps its original
+                    # audit record through any later sweep that also covers it
+                    self._conn.executemany(
+                        "INSERT INTO stale_marks(key, reason, marked_at) VALUES(?,?,?) "
+                        "ON CONFLICT(key) DO NOTHING",
+                        [(k, reason, marked_at) for k in chunk],
+                    )
+                    cur = self._conn.execute(
+                        f"UPDATE verifications SET stale=1 WHERE key IN ({','.join('?' * len(chunk))})", chunk
+                    )
+                    marked += cur.rowcount
+            else:
+                for chunk in _chunks(keys):
+                    holes = ",".join("?" * len(chunk))
+                    self._conn.execute(f"DELETE FROM stale_marks WHERE key IN ({holes})", chunk)
+                    cur = self._conn.execute(f"UPDATE verifications SET stale=0 WHERE key IN ({holes})", chunk)
+                    marked += cur.rowcount
+            self._conn.commit()
+        except Exception:
+            # a half-mark left pending would be committed by the next unrelated
+            # request; roll the whole batch back instead
+            self._conn.rollback()
+            raise
+        return marked
+
+    def stale_listing(self) -> list[dict]:
+        rows = self._conn.execute(
+            "SELECT m.key, m.reason, m.marked_at, v.contract_name, v.ran_at "
+            "FROM stale_marks m LEFT JOIN verifications v ON v.key=m.key "
+            "UNION ALL "
+            "SELECT key, '', NULL, contract_name, ran_at FROM verifications "
+            "WHERE stale=1 AND key NOT IN (SELECT key FROM stale_marks) "
+            "ORDER BY marked_at",
+        )
+        return [dict(r) for r in rows]
 
 
 class CacheServer(ThreadingHTTPServer):
@@ -164,6 +257,10 @@ class _Handler(BaseHTTPRequestHandler):
             with lock:
                 content = store.get_blob(unquote(self.path[len("/blob/"):]))
             return self._send(200, {"content": content}) if content is not None else self._error(404, "not_found", "no such blob")
+        if self.path == "/stale":  # observability is a read: the read token suffices
+            with lock:
+                rows = store.stale_listing()
+            return self._send(200, {"stale": rows})
         return self._error(404, "not_found", "unknown route")
 
     def _handle_post(self) -> None:
@@ -194,6 +291,35 @@ class _Handler(BaseHTTPRequestHandler):
             with lock:
                 blob_hash = store.put_blob(content)
             return self._send(200, {"hash": blob_hash})
+        if self.path == "/stale":
+            keys, names = body.get("keys", []), body.get("names", [])
+            stale, reason = body.get("stale", True), body.get("reason", "")
+            for field, value in (("keys", keys), ("names", names)):
+                if not isinstance(value, list) or any(not isinstance(v, str) or not v for v in value):
+                    return self._error(400, "bad_request", f"{field} must be a list of non-empty strings")
+                if len(value) > MAX_STALE_SELECTORS:
+                    return self._error(400, "bad_request", f"at most {MAX_STALE_SELECTORS} {field} per request")
+            if not keys and not names:
+                return self._error(400, "bad_request", "at least one of keys/names must be non-empty")
+            if not isinstance(stale, bool):
+                return self._error(400, "bad_request", "stale must be true or false")
+            if not isinstance(reason, str):
+                return self._error(400, "bad_request", "reason must be a string")
+            if not stale and names:
+                # restore is key-addressed only: a name here would also lift
+                # tombstones this sweep never created (GET /stale lists the keys)
+                return self._error(400, "bad_request", "restore takes keys only, not names")
+            # resolve + mark under one lock hold, so no publish slips between them
+            with lock:
+                all_keys = sorted(set(keys) | set(store.keys_for_names(names)))
+                if len(all_keys) > MAX_STALE_SELECTORS:
+                    return self._error(400, "bad_request", f"refusing to mark more than {MAX_STALE_SELECTORS} keys at once")
+                marked = store.mark_stale_keys(all_keys, stale=stale, reason=reason)
+            result = {"marked": marked, "keys": len(all_keys)}
+            if stale:
+                # keys revoked ahead of any publish: no row yet, tombstone only
+                result["premarked"] = len(all_keys) - marked
+            return self._send(200, result)
         return self._error(404, "not_found", "unknown route")
 
 
