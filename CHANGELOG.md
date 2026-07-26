@@ -7,6 +7,15 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Strict provenance mode (#49): opt-in `.hashloom/config.json`
+  `{"strict_provenance": true}`. `verify` refuses any unit whose dependency
+  closure contains a `status: inferred` contract — a structured
+  `inferred_contract` error per unit (`ok: false`, CLI exit 1), with the
+  unvetted names listed. The refusal runs no tests and writes no cache
+  entry, so a pre-existing green revives when the contract is confirmed
+  (the flip stays free). Reads (`get_contract`, `get_dependents`, `status`)
+  and writes keep their advisory flags so machine-drafted batches can still
+  land and be reviewed. Config-only: no new flags, tools, or commands.
 - `integrations/speckit-hashloom/` (#75): a [GitHub
   spec-kit](https://github.com/github/spec-kit) extension — the greenfield
   counterpart to the graphify importer. `/speckit.hashloom.seams` drafts

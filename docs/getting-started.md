@@ -100,8 +100,11 @@ One call verifies the unit plus everything it invalidates, serves cached greens
 for whatever nothing busted, runs tests for the rest, and returns a single
 `ok: true|false` (the CLI exits nonzero on false — the same gate works in CI or
 a pre-commit hook). Until an inferred contract is confirmed, every verify and
-blast-radius answer that rests on it carries an `inferred` flag: advisory,
-never an error, but visible.
+blast-radius answer that rests on it carries an `inferred` flag: advisory by
+default, but visible. (Teams that want unvetted contracts to hard-fail can set
+`{"strict_provenance": true}` in `.hashloom/config.json` — `verify` then
+refuses such units with a structured `inferred_contract` error until they're
+reviewed; see the README.)
 
 **Contract changes announce their blast radius.** When you later change a
 confirmed contract — a signature, an example — the `put_contract` response
