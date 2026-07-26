@@ -50,10 +50,15 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
   their keys (with audit, restore, and name sweeps), and a revoked key stays
   stale under any publish. See docs/hosted-store.md item 5 for the full
   argument.
-- **Dependency set in the key** — the deeper soundness knob: fold the lockfile /
-  resolved dependency set (and possibly OS/arch) into the toolchain identity, so
-  a green from an environment with different third-party versions is not
-  trusted.
+- **Dependency set in the key** — ✓ **Shipped** (unreleased): the toolchain
+  identity now carries a ` deps <file>=<sha256-12>` suffix over the project's
+  committed dependency source (lockfile, or declared manifest as fallback),
+  CRLF-normalised so cross-OS checkouts share. A green from a different
+  declared dependency set is never trusted; projects with no dependency
+  source keep the version-only identity, so nothing busts for them. OS/arch
+  stays out deliberately — the CI(Linux)-serves-laptops promise holds, and
+  installed-env drift remains revocation's job (see docs/hosted-store.md
+  item 3 for the decisions).
 
 ## Sharpening the verification model (continuing)
 

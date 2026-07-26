@@ -18,6 +18,11 @@ from .. import tokens
 from ..config import load_config
 from ..errors import HashloomError
 from . import SUMMARY_MAX_TOKENS
+from .deps import dep_suffix
+
+# go.sum only: dep-free modules (go.mod, nothing third-party) keep their keys,
+# and the go directive is already the version core
+_DEP_SOURCES = ("go.sum",)
 
 _GOHASH_DIR = Path(__file__).parent / "gohash"
 _GO_FILE_LINE = re.compile(r"[^\s:]+\.go:\d+:")  # a `file.go:NN:` location in test output
@@ -57,21 +62,19 @@ class GoAdapter:
 
     def toolchain_identity(self, root: Path, override: str | None = None) -> str:
         key = (str(root), override)
-        if key in self._id_cache:
-            return self._id_cache[key]
-        go = self._go(root, override)
-        try:
-            proc = subprocess.run(
-                [go, "version"], capture_output=True, text=True, check=True, timeout=30,
-                env={**os.environ, "GOTOOLCHAIN": "local"},
-            )
-        except (OSError, subprocess.SubprocessError):
-            raise HashloomError("bad_toolchain", f"could not read the Go version from '{go}'")
-        m = _GO_VERSION.search(proc.stdout)
-        # version only (drop the trailing GOOS/GOARCH) so cross-OS greens share
-        ident = f"go {m.group(1)}" if m else f"go {_oneline(proc.stdout)}"
-        self._id_cache[key] = ident
-        return ident
+        if key not in self._id_cache:
+            go = self._go(root, override)
+            try:
+                proc = subprocess.run(
+                    [go, "version"], capture_output=True, text=True, check=True, timeout=30,
+                    env={**os.environ, "GOTOOLCHAIN": "local"},
+                )
+            except (OSError, subprocess.SubprocessError):
+                raise HashloomError("bad_toolchain", f"could not read the Go version from '{go}'")
+            m = _GO_VERSION.search(proc.stdout)
+            # version only (drop the trailing GOOS/GOARCH) so cross-OS greens share
+            self._id_cache[key] = f"go {m.group(1)}" if m else f"go {_oneline(proc.stdout)}"
+        return self._id_cache[key] + dep_suffix(root, _DEP_SOURCES)
 
     # -- hashing (via the go/ast helper) ------------------------------------
 

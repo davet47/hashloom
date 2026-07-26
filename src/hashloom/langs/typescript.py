@@ -28,6 +28,14 @@ from .. import tokens
 from ..config import load_config
 from ..errors import HashloomError
 from . import SUMMARY_MAX_TOKENS
+from .deps import dep_suffix
+
+# shrinkwrap first (npm gives it authority over package-lock when both exist);
+# package.json stays out — a range manifest, not a resolved set
+_DEP_SOURCES = (
+    "npm-shrinkwrap.json", "package-lock.json", "pnpm-lock.yaml",
+    "yarn.lock", "bun.lock", "bun.lockb",
+)
 
 _TSHASH = Path(__file__).parent / "tshash" / "main.js"
 _TAP_LINE = re.compile(r"^(ok|not ok) \d+ - (.*?)(?:\s+#.*)?$")
@@ -66,23 +74,21 @@ class TypeScriptAdapter:
 
     def toolchain_identity(self, root: Path, override: str | None = None) -> str:
         key = (str(root), override)
-        if key in self._id_cache:
-            return self._id_cache[key]
-        node = self._node(root, override)
-        try:
-            nv = subprocess.run(
-                [node, "--version"], capture_output=True, text=True, check=True, timeout=30
-            ).stdout.strip().lstrip("v")
-            # the project's own typescript (resolved from root, like the hasher)
-            tv = subprocess.run(
-                [node, "-p", "require('typescript').version"],
-                cwd=root, capture_output=True, text=True, check=True, timeout=30,
-            ).stdout.strip()
-        except (OSError, subprocess.SubprocessError):
-            raise HashloomError("bad_toolchain", f"could not read node/typescript versions via '{node}'")
-        ident = f"node {nv} ts {tv}"
-        self._id_cache[key] = ident
-        return ident
+        if key not in self._id_cache:
+            node = self._node(root, override)
+            try:
+                nv = subprocess.run(
+                    [node, "--version"], capture_output=True, text=True, check=True, timeout=30
+                ).stdout.strip().lstrip("v")
+                # the project's own typescript (resolved from root, like the hasher)
+                tv = subprocess.run(
+                    [node, "-p", "require('typescript').version"],
+                    cwd=root, capture_output=True, text=True, check=True, timeout=30,
+                ).stdout.strip()
+            except (OSError, subprocess.SubprocessError):
+                raise HashloomError("bad_toolchain", f"could not read node/typescript versions via '{node}'")
+            self._id_cache[key] = f"node {nv} ts {tv}"
+        return self._id_cache[key] + dep_suffix(root, _DEP_SOURCES)
 
     # -- hashing (via the tshash helper) ------------------------------------
 

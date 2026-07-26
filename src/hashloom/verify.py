@@ -3,9 +3,18 @@
 Verification key = sha256 over (contract_hash, impl_hash, test-source hash,
 toolchain identity, transitive dep contract hashes). A cached green result is
 valid iff the full key matches — any contract edit anywhere in the dependency
-closure, a test-body edit, or a toolchain version change produces a new key. The
-toolchain component is what makes a shared/cross-machine green sound rather than
-merely present (a 3.11 green is not served to 3.13).
+closure, a test-body edit, or a toolchain identity change (the toolchain
+version, or the declared dependency set when the project commits a
+lockfile/manifest — see langs/deps.py) produces a new key. The toolchain
+component is what makes a shared/cross-machine green sound rather than merely
+present (a 3.11 green is not served to 3.13, and a green from a different
+declared dependency set is not trusted).
+
+Two different `deps` notions meet in the raw key string: the `deps=` component
+below carries the transitive dep CONTRACT hashes (hashloom's own graph), while
+the toolchain identity may carry a ` deps <file>=<digest>` token for the
+project's THIRD-PARTY dependency set. The raw string is sha256'd and never
+surfaced, but readers of this file see both.
 """
 
 from __future__ import annotations

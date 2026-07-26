@@ -9,6 +9,11 @@ from pathlib import Path
 from .. import implhash, verify
 from ..config import resolve_python
 from ..errors import HashloomError
+from .deps import dep_suffix
+
+# resolved locks before the loose manifest; pyproject.toml stays out (a range
+# manifest with cosmetic churn, not a resolved dependency set)
+_DEP_SOURCES = ("uv.lock", "poetry.lock", "Pipfile.lock", "pdm.lock", "requirements.txt")
 
 
 class PythonAdapter:
@@ -33,21 +38,22 @@ class PythonAdapter:
 
     def toolchain_identity(self, root: Path, override: str | None = None) -> str:
         # the resolved interpreter may differ from the one running hashloom, so ask
-        # it directly; version-only (no platform) keeps cross-OS greens shareable
+        # it directly; the version-only core (no platform) keeps cross-OS greens
+        # shareable, and the committed dependency set rides as a suffix
         key = (str(root), override)
-        if key in self._id_cache:
-            return self._id_cache[key]
-        python = self.resolve_toolchain(root, override)
-        try:
-            proc = subprocess.run(
-                [python, "-c", "import platform;print(platform.python_version())"],
-                capture_output=True, text=True, check=True, timeout=30,
-            )
-        except (OSError, subprocess.SubprocessError):
-            raise HashloomError("bad_toolchain", f"could not read the Python version from '{python}'")
-        ident = f"python {proc.stdout.strip()}"
-        self._id_cache[key] = ident
-        return ident
+        if key not in self._id_cache:
+            python = self.resolve_toolchain(root, override)
+            try:
+                proc = subprocess.run(
+                    [python, "-c", "import platform;print(platform.python_version())"],
+                    capture_output=True, text=True, check=True, timeout=30,
+                )
+            except (OSError, subprocess.SubprocessError):
+                raise HashloomError("bad_toolchain", f"could not read the Python version from '{python}'")
+            self._id_cache[key] = f"python {proc.stdout.strip()}"
+        # recomputed every call (the digest itself is memoised), so a long-lived
+        # serve sees lockfile edits and verify/status agree by construction
+        return self._id_cache[key] + dep_suffix(root, _DEP_SOURCES)
 
     def run_tests(
         self, root: Path, node_ids: list[str], toolchain: str, timeout: int | float

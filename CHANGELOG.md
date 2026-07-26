@@ -7,6 +7,21 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- Dependency set in the verification key (v0.5 theme, final item): the
+  toolchain identity now appends ` deps <file>=<sha256-12>` when the project
+  commits a dependency source at its root — resolved lockfiles first
+  (`uv.lock`/`poetry.lock`/`Pipfile.lock`/`pdm.lock`, `go.sum`, the
+  npm/pnpm/yarn/bun locks, `gradle.lockfile`), declared manifests as
+  fallback (`requirements.txt`, `pom.xml`, `build.gradle(.kts)`). The digest
+  is over CRLF-normalised bytes, so cross-OS checkouts share; OS/arch stays
+  out of the identity deliberately (CI greens keep serving every platform).
+  A green from an environment with a different declared dependency set is
+  never trusted. **One-time cost on upgrade**: cached greens for projects
+  with a committed lockfile/manifest re-verify once; projects without one
+  keep their greens byte-identically. Server-side stale marks do not carry
+  to the new keys — re-issue `POST /stale` sweeps after the team upgrades
+  if the cause persists. Upgrade CI (the publish-token holder) first so the
+  shared cache repopulates in one wave.
 - Cache server concurrency (v0.5 theme, item 2): `python -m
   hashloom.cache_server` is now a `ThreadingHTTPServer` — requests are
   handled concurrently while one lock serialises the sqlite connection, so
