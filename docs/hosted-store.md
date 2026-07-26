@@ -64,10 +64,18 @@ and `RemoteStore` makes the shared side an HTTP backend (item 1 below and
    re-runs. Grain is **version-only** (no OS/arch) so a CI(Linux) green still serves
    a dev on Mac/Windows. Not yet in the identity: the dependency set (pip freeze /
    lockfile) and OS/arch — a deeper soundness knob if cross-platform drift bites.
-4. **Concurrent writers.** The local `fcntl` lock (see `project.py`) becomes a
-   server-side concern: transactional upserts and last-writer-wins or CAS on the
-   verdict rows. (The current server is single-threaded, so writes already
-   serialise; CAS is for a threaded/multi-process server.)
+4. ✓ **Concurrent writers (shipped).** The server is a `ThreadingHTTPServer`;
+   requests are handled concurrently while one lock serialises the single
+   sqlite connection, so every db write stays an atomic single-statement
+   commit. "CAS or equivalent" resolved as **first-writer-wins on verdict
+   rows**: the verification key *is* the compare — one row per key, a
+   duplicate publish (a re-run of a bit-identical closure) is a no-op that
+   neither refreshes `ran_at` nor resets `stale`. That last part pre-closes
+   the race with #5: a duplicate publish can never resurrect a row that
+   cross-graph invalidation just marked stale. Unexpected handler errors
+   return structured JSON 500s, never a stack trace. Deferred throughput
+   path, if a team ever saturates the lock: WAL journal mode + per-thread
+   connections + bounded busy-retry.
 5. **Cross-graph invalidation.** When a shared contract changes, dependents'
    shared verdicts must be invalidated for the whole team, not just locally.
    `mark_stale` needs a shared analogue keyed off the dependency graph.

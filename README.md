@@ -172,7 +172,9 @@ bearer-token HTTP service over a SQLite store; an operational process, not a CLI
 command). Auth is scoped: give the server an optional `--publish-token` and only
 holders of it can write greens (CI publishes, laptops with the read token only
 consume; a single token still grants both roles, as before). A read-only client
-can set `"publish": false` to skip publish requests entirely. Only greens are
+can set `"publish": false` to skip publish requests entirely. The server
+handles requests concurrently, and duplicate publishes of the same
+verification key are no-ops (first writer wins). Only greens are
 published — failures never cross the boundary — and the toolchain-in-key rule
 above keeps a shared green sound across machines. If the shared store is
 unreachable, verify degrades silently to local.
