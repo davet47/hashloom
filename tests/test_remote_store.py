@@ -105,6 +105,18 @@ def test_shared_green_served_to_second_client_over_http(cache, tmp_path):
     b_local.close()
 
 
+def test_tampered_blob_is_a_miss_not_wrong_weft(scoped_cache, monkeypatch):
+    base, server_store = scoped_cache
+    client = RemoteStore(base, _PUBLISH_TOKEN)
+    blob_hash = client.put_blob("def total(xs):\n    return sum(xs)\n")
+    # honest content round-trips (the re-hash agrees)...
+    assert client.get_blob(blob_hash) is not None
+    # ...but content that no longer hashes to the requested key is dropped
+    # like a miss — a buggy/compromised shared cache never serves wrong weft
+    monkeypatch.setattr(server_store, "get_blob", lambda h: "def total(xs):\n    return 0\n")
+    assert client.get_blob(blob_hash) is None
+
+
 def test_failures_not_published_over_http(cache, tmp_path):
     base, token = cache
     root = tmp_path / "proj"

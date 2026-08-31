@@ -1,0 +1,11 @@
+name: InvoiceFor
+signature: "static Invoice InvoiceFor(Customer customer, IReadOnlyList<LineItem> lines)"
+deps: [Customer, LineItem, Invoice, SubtotalCents, DiscountCents, TaxCents]
+invariants:
+  - the whole pipeline for one order — subtotal, discount, tax on what remains, in one invoice
+examples:
+  - in: "Ada (not exempt), 3 WIDGET at 2500c + 10 GADGET at 12000c"
+    out: "Invoice(c1, 127500, 3875, 9890, 133515)"
+tests:
+  - tests/BillingTests.cs::InvoiceRunsTheWholePipeline
+impl: src/Billing.cs::Billing.InvoiceFor

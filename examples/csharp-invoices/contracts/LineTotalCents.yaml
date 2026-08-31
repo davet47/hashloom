@@ -1,0 +1,11 @@
+name: LineTotalCents
+signature: "static int LineTotalCents(LineItem line)"
+deps: [LineItem]
+invariants:
+  - quantity times unit price; a zero quantity totals zero
+examples:
+  - in: "3 of WIDGET at 2500c"
+    out: "7500"
+tests:
+  - tests/PricingTests.cs::LineTotalMultipliesQuantityByUnitPrice
+impl: src/Pricing.cs::Pricing.LineTotalCents

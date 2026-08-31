@@ -58,7 +58,14 @@ class RemoteStore:
 
     def get_blob(self, blob_hash: str) -> str | None:
         st, body = self._request("GET", "/blob/" + urllib.parse.quote(blob_hash, safe=""))
-        return body.get("content") if st == 200 and isinstance(body, dict) else None
+        if st != 200 or not isinstance(body, dict):
+            return None
+        content = body.get("content")
+        # never trust the wire: re-hash, so a buggy or compromised shared cache
+        # can't serve wrong weft under a right key — a mismatch is just a miss
+        if not isinstance(content, str) or hashlib.sha256(content.encode("utf-8")).hexdigest() != blob_hash:
+            return None
+        return content
 
     def put_blob(self, content: str) -> str:
         if self._publish:

@@ -1,0 +1,12 @@
+name: FormatCents
+signature: "static string FormatCents(int cents)"
+invariants:
+  - dollars with exactly two cent digits; the minus sign leads the dollar sign
+examples:
+  - in: "133515"
+    out: "$1335.15"
+  - in: "-50"
+    out: "-$0.50"
+tests:
+  - tests/BillingTests.cs::Formatting.FormatsCentsAsDollars
+impl: src/Billing.cs::Billing.FormatCents

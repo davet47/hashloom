@@ -1,0 +1,11 @@
+name: DiscountCents
+signature: "static int DiscountCents(int subtotalCents)"
+invariants:
+  - progressive volume brackets — nothing to 50000c, 5% of the slice to 200000c, 10% above — floored per bracket
+  - monotonic — a bigger subtotal never earns a smaller discount
+examples:
+  - in: "127500"
+    out: "3875"
+tests:
+  - tests/ChargesTests.cs::DiscountsProgressivelyByBracket
+impl: src/Charges.cs::Charges.DiscountCents

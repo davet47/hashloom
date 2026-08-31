@@ -6,6 +6,37 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **C# example project** (`examples/csharp-invoices`): 11 contracts over a
+  billing run, the java-payroll three-layer shape in C# idiom — records
+  hashed whole, `Class.Method` quals, an `[InlineData]` bracket table, and a
+  nested test class with dotted node ids. Fills the example gap ISSUES.md
+  #23 tracked; its full sweep lands in docs/benchmarks.md at 3.8×.
+- **Live NUnit and Microsoft.Testing.Platform coverage** for the C# adapter:
+  the suite now runs a real NUnit project and a real xunit-v3 (MTP) project
+  end to end, alongside the existing xUnit e2e (ISSUES.md #23).
+
+### Changed
+- The C# adapter passes `-p:TestingPlatformShowTestsFailure=true` to
+  `dotnet test` (a no-op for VSTest projects) and parses the MSBuild-error-
+  shaped failure lines a Microsoft.Testing.Platform project emits — MTP
+  failures now produce real `fail` verdicts with per-test summaries instead
+  of the conservative `tests_failed_to_run`. Parameterized display names
+  (`[Theory]`/`[TestCase]` argument lists) parse as failures too. Caveat,
+  documented in the README: `dotnet test` ignores `--filter` for MTP
+  projects, so each verify runs that project's whole suite — conservative,
+  never a wrong green.
+- `api.status` takes the same `python` toolchain override `api.verify` does,
+  and `hashloom serve --python` threads it into the status closure — so
+  status reports the interpreter verify actually uses and computes the same
+  verification key, never calling dirty (or refusing on config) what verify
+  just greened (ISSUES.md #22; the `status` contract gained the invariant).
+
+### Fixed
+- `RemoteStore.get_blob` re-hashes returned content against the requested
+  hash and treats a mismatch as a miss, so a buggy or compromised shared
+  cache can never serve wrong weft (ISSUES.md #19).
+
 ## [0.5.1] - 2026-07-26
 
 ### Added

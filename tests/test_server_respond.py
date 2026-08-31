@@ -1,6 +1,7 @@
 """The `_respond` wrapper: structured errors, never a stack trace, token counters."""
 
 import json
+import sys
 
 import anyio
 
@@ -26,6 +27,19 @@ def test_happy_path_counts_tokens(project):
     # the first call's response was token-counted into the store
     second = rpc(mcp, "status", {})
     assert second["tokens"]["by_tool"]["status"] > 0
+
+
+def test_serve_python_override_reaches_status_too(project):
+    # ISSUES #22: `serve --python` threaded into verify but not status, so
+    # status could call dirty (or refuse) what verify just greened
+    root, store = project
+    (root / ".hashloom" / "config.json").write_text('{"python": "/no/such/python"}')
+    store.close()
+    mcp = build_server(root, python=sys.executable)
+    assert rpc(mcp, "verify", {"names": ["total", "report"]})["ok"] is True
+    s = rpc(mcp, "status", {})
+    assert s["python"] == sys.executable
+    assert s["dirty"] == []
 
 
 def test_hashloom_error_comes_back_structured(project):

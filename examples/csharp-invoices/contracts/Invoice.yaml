@@ -1,0 +1,10 @@
+name: Invoice
+signature: "record Invoice(string CustomerId, int SubtotalCents, int DiscountCents, int TaxCents, int TotalCents)"
+invariants:
+  - total is subtotal minus discount plus tax, always
+examples:
+  - in: "c1, subtotal 127500, discount 3875, tax 9890"
+    out: "Invoice(c1, 127500, 3875, 9890, 133515)"
+tests:
+  - tests/TypesTests.cs::InvoiceIsEqualByFields
+impl: src/Invoice.cs::Invoice

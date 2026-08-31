@@ -10,7 +10,12 @@ compiled helper lands in the user cache dir, keyed by SDK version and helper
 source, so the cost is paid once per machine per SDK.
 
 The runner is `dotnet test` on the project root (any `.sln`/`.slnx`/`.csproj`
-there — xUnit, NUnit, and MSTest all ride the same VSTest filter grammar).
+there — xUnit, NUnit, and MSTest all ride the same VSTest filter grammar). A
+Microsoft.Testing.Platform project (xunit v3 and friends) runs too: run_tests
+sets TestingPlatformShowTestsFailure so per-test failures reach the console
+and _parse_test can summarise them — though `dotnet test` ignores --filter for
+MTP projects and runs the whole suite, which stays conservative (a green still
+covers the contract's tests; an unrelated failure blocks, never wrongly greens).
 A C# test node id is "tests/CalcTests.cs::TotalSums": the top-level class is
 the file's stem (the ecosystem's file-per-class convention, the same reading
 the Java adapter uses) and "Inner.Method" segments map to the runtime
@@ -64,8 +69,16 @@ _FRAMEWORK_REFS = (
 _SDK_LINE = re.compile(r"^(\S+)\s+\[(.+)\]\s*$")
 # `Microsoft.NETCore.App 9.0.7 [/usr/local/share/dotnet/shared/...]`
 _RUNTIME_LINE = re.compile(r"^Microsoft\.NETCore\.App\s+(\S+)\s+\[(.+)\]\s*$")
-# `  Failed CalcTests.TotalSums [12 ms]` — never the `Failed!` summary line
-_FAIL_LINE = re.compile(r"^\s*Failed ([\w.+$]\S*)(?:\s+\[.*\])?$")
+# `  Failed CalcTests.TotalSums [12 ms]` — never the `Failed!` summary line.
+# A parameterized case ([Theory]/[TestCase]) appends `(arg: value, ...)` to the
+# display name, spaces included, so the name may end in one parenthesized group.
+_FAIL_LINE = re.compile(r"^\s*Failed ([\w.+$]\S*(?:\([^)]*\))?)(?:\s+\[.*\])?$")
+# a Microsoft.Testing.Platform project (e.g. xunit v3) under `dotnet test`
+# reports failures as MSBuild errors instead of console-logger `Failed` lines:
+# `/x/CalcTests.cs(6): error test failed: CalcTests.TotalSums (10ms): ... [/x/p.csproj]`
+# — only when TestingPlatformShowTestsFailure is set (run_tests passes it).
+# The first such line carries `Name (duration): message`; the rest are detail.
+_MTP_FAIL_LINE = re.compile(r"error test failed:\s*(.+?)(?:\s+\[[^\[\]]*\])?$")
 
 
 def _oneline(s: str) -> str:
@@ -304,7 +317,16 @@ class CSharpAdapter:
                 "bad_toolchain",
                 "no .sln or .csproj at the project root — C# tests run via dotnet test",
             )
-        cmd = [toolchain, "test", "--nologo", "--filter", self._filter(node_ids)]
+        # the -p: property makes a Microsoft.Testing.Platform project (xunit v3
+        # et al.) print per-test failures to the console so _parse_test can
+        # summarise them; VSTest projects ignore the unused MSBuild property.
+        # (MTP under `dotnet test` ignores --filter and runs the whole suite —
+        # conservative: a green still covers the contract's tests.)
+        cmd = [
+            toolchain, "test", "--nologo",
+            "-p:TestingPlatformShowTestsFailure=true",
+            "--filter", self._filter(node_ids),
+        ]
         try:
             proc = subprocess.run(
                 cmd, cwd=root, env=_env(), capture_output=True, text=True, timeout=timeout
@@ -352,6 +374,12 @@ class CSharpAdapter:
                     )
                     break
             return (False, tokens.truncate(f"{m.group(1)}: {_oneline(detail)}", SUMMARY_MAX_TOKENS))
+        # an MTP run: the first `error test failed:` line already reads
+        # `Name (duration): message` — the later ones are its detail/stack
+        for line in lines:
+            m = _MTP_FAIL_LINE.search(line)
+            if m:
+                return (False, tokens.truncate(_oneline(m.group(1)), SUMMARY_MAX_TOKENS))
         # non-zero exit with no failed-test line: the build or runner could not
         # run (compile error, restore failure, no matching tests, ...)
         first_error = next(

@@ -1,0 +1,10 @@
+name: LineItem
+signature: "record LineItem(string Sku, int Quantity, int UnitCents)"
+invariants:
+  - money is integer cents everywhere in this project — no decimals or doubles touch currency
+examples:
+  - in: "sku WIDGET, 3 of, 2500c each"
+    out: "a LineItem value; equal to any LineItem with the same fields"
+tests:
+  - tests/TypesTests.cs::LineItemHoldsIntegerCents
+impl: src/LineItem.cs::LineItem

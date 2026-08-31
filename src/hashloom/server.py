@@ -84,7 +84,7 @@ def build_server(
     def status() -> dict:
         """Project health: dirty contracts, stale verifications, cache hit-rate,
         and cumulative token counters for every tool response."""
-        return _respond("status", lambda: api.status(root, store))
+        return _respond("status", lambda: api.status(root, store, python=python))
 
     return mcp
 

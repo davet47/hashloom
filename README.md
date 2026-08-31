@@ -43,8 +43,8 @@ Same three regeneration tasks on a 20-contract sample project, once with raw fil
 
 Raw mode counts what a file-based agent reads per task: the unit's spec file, every transitive dep's spec file, every source module in the dep closure, the unit's test file, and the output of running the suite. It is deliberately generous to the baseline: it assumes the agent already knows the exact dependency closure, which is precisely the thing hashloom computes for you.
 
-The same methodology sweeps *every* unit of all four example projects —
-Python, Go, TypeScript, and Java — via `bench/sweep.py`, and works on any hashloom
+The same methodology sweeps *every* unit of all five example projects —
+Python, Go, TypeScript, Java, and C# — via `bench/sweep.py`, and works on any hashloom
 project including yours. Full sweeps average lower than the gate (they count
 the leaf types that barely benefit); the ratio tracks dependency depth, so
 deeper projects score higher. All the numbers, their distributions, and the
@@ -157,7 +157,11 @@ semantics hold per language:
   once per SDK version with the SDK's *own* `csc` against its bundled
   `Microsoft.CodeAnalysis` (no packages, no network), runs `dotnet test` on the
   root project/solution with a `FullyQualifiedName~` filter (xUnit, NUnit, and
-  MSTest all ride it). Needs the .NET SDK >= 8; config key `{"dotnet": "..."}`.
+  MSTest all ride it). A Microsoft.Testing.Platform project (xunit v3) works
+  too, with one caveat: `dotnet test` ignores the filter there, so each verify
+  runs that project's whole suite — conservative (an unrelated failure blocks;
+  a green still covers the contract's tests). Needs the .NET SDK >= 8; config
+  key `{"dotnet": "..."}`.
 
 Python stays the default; a project can mix languages freely.
 
@@ -200,7 +204,7 @@ hashloom init && hashloom index && hashloom serve   # then point your agent at i
 20 contracts, 25 tests, dependency chains up to six contracts deep. Every
 example directory ships its own README with per-language run instructions.
 
-There are counterpart examples in three other languages, each using the same
+There are counterpart examples in four other languages, each using the same
 `init && index` loop:
 
 - **Go** — `examples/go-ledger`: 8 contracts over a small double-entry ledger.
@@ -215,6 +219,12 @@ There are counterpart examples in three other languages, each using the same
   Spring service layer with zero framework dependencies.
   `hashloom verify --radius TimeSheet` runs Maven under the hood. Needs a
   JDK >= 17 and Maven.
+- **C#** — `examples/csharp-invoices`: 11 contracts over a billing run, the
+  Java example's three-layer shape in C# idiom — records hashed whole,
+  `Class.Method` quals, an `[InlineData]` bracket table, and a nested test
+  class with dotted node ids (the runtime's `Outer+Inner` spelling).
+  `hashloom verify --radius DiscountCents` runs `dotnet test` under the hood.
+  Needs the .NET SDK >= 8.
 
 ## Development
 

@@ -233,8 +233,12 @@ def cached_impl_hash(root: Path, store: Store, impl: str, contract: str | None =
     return h
 
 
-def status(root: Path, store: Store) -> dict:
-    """Dirty contracts, stale verifications, cache hit-rate, token counters."""
+def status(root: Path, store: Store, python: str | None = None) -> dict:
+    """Dirty contracts, stale verifications, cache hit-rate, token counters.
+
+    `python` is the same toolchain override verify takes (`serve --python`),
+    threaded into the identity so status never calls dirty what verify greens.
+    """
     dirty: list[str] = []
     inferred: list[str] = []
     for name in store.contract_names():
@@ -251,7 +255,7 @@ def status(root: Path, store: Store) -> dict:
         adapter = adapter_for(data["impl"])
         thash = adapter.test_source_hash(root, data.get("tests", []))
         try:
-            tid = adapter.toolchain_identity(root)  # same key component verify stored
+            tid = adapter.toolchain_identity(root, override=python)  # same key component verify stored
         except HashloomError:
             dirty.append(name)  # can't resolve the toolchain -> can't claim a green
             continue
@@ -268,7 +272,7 @@ def status(root: Path, store: Store) -> dict:
         "contracts": len(store.contract_names()),
         "dirty": dirty,
         "stale_verifications": store.stale_verifications(),
-        "python": resolve_python(root),  # which interpreter verify shells pytest to
+        "python": resolve_python(root, override=python),  # which interpreter verify shells pytest to
         "cache": {
             "hits": hits,
             "misses": misses,

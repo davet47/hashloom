@@ -11,6 +11,8 @@ build/
 htmlcov/
 node_modules/
 target/
+bin/
+obj/
 # graphify artifacts: the graph is committed, the derived views and caches are not
 graphify-out/*
 !graphify-out/graph.json

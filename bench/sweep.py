@@ -8,13 +8,14 @@ get_contract packet, a blast-radius check, and the verify response).
 
 Language-aware only where it must be: the suite-output component runs each
 project's natural runner (pytest / `go test ./...` / `node --test` / `mvn -q
-test`), chosen by the impl extensions present. No pass/fail gate — bench/benchmark.py remains
+test` / `dotnet test`), chosen by the impl extensions present. No pass/fail gate — bench/benchmark.py remains
 the DoD guard; this reports.
 
     uv run python bench/sweep.py examples/sales
     uv run python bench/sweep.py examples/go-ledger
-    uv run python bench/sweep.py examples/ts-cart       # npm install there first
-    uv run python bench/sweep.py examples/java-payroll  # needs a JDK + Maven
+    uv run python bench/sweep.py examples/ts-cart          # npm install there first
+    uv run python bench/sweep.py examples/java-payroll     # needs a JDK + Maven
+    uv run python bench/sweep.py examples/csharp-invoices  # needs the .NET SDK >= 8
 """
 
 from __future__ import annotations
@@ -41,6 +42,7 @@ SUITE_CMDS = {
     ".go": ["go", "test", "./..."],
     ".ts": ["node", "--test", "--experimental-strip-types"],
     ".java": ["mvn", "--batch-mode", "-q", "test"],
+    ".cs": ["dotnet", "test", "--nologo"],
 }
 
 

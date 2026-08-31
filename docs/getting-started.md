@@ -124,8 +124,9 @@ a contract where it earns no place is correct use, not a failure.
 
 - **Reference projects** — [`examples/sales`](../examples/sales) (Python, 20
   contracts), [`examples/go-ledger`](../examples/go-ledger) (Go),
-  [`examples/ts-cart`](../examples/ts-cart) (TypeScript), and
-  [`examples/java-payroll`](../examples/java-payroll) (Java): the same loop in
+  [`examples/ts-cart`](../examples/ts-cart) (TypeScript),
+  [`examples/java-payroll`](../examples/java-payroll) (Java), and
+  [`examples/csharp-invoices`](../examples/csharp-invoices) (C#): the same loop in
   each language, one adapter per impl extension.
 - **Team scale** — point `.hashloom/config.json` at a shared cache
   (`{"shared": {"url", "token"}}`, backend: `python -m hashloom.cache_server`)

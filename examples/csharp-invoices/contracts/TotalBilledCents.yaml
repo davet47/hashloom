@@ -1,0 +1,11 @@
+name: TotalBilledCents
+signature: "static int TotalBilledCents(IReadOnlyList<Invoice> invoices)"
+deps: [Invoice]
+invariants:
+  - what the run bills in total; an empty run totals zero
+examples:
+  - in: "invoices totalling 133515c and 108c"
+    out: "133623"
+tests:
+  - tests/BillingTests.cs::TotalBilledSumsInvoices
+impl: src/Billing.cs::Billing.TotalBilledCents
