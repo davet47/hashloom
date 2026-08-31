@@ -30,8 +30,9 @@ documents "the entire surface"; if a change would add to it, stop and confirm.
 
 The repo is itself a hashloom project: `contracts/` holds contracts for the
 stable seams (the five `api.py` functions, the `contract.py` hashing trio,
-`impl_hash`, `verification_key`, `HashloomError`, the `Store` Protocol, and
-the `LanguageAdapter` seam behind the per-extension adapters). The
+`impl_hash`, `verification_key`, `HashloomError`, the `Store` Protocol, the
+`LanguageAdapter` seam behind the per-extension adapters, and the
+`cache_protocol` wire spec — spec-only, no impl to verify). The
 workflow from [docs/getting-started.md](docs/getting-started.md) applies here:
 
 - **The hashloom MCP server is project-configured** in [.mcp.json](.mcp.json)
@@ -47,11 +48,13 @@ workflow from [docs/getting-started.md](docs/getting-started.md) applies here:
   agent) derived the contract rather than the user specifying it, mark it
   `status: inferred`; the user flips it to `confirmed` on review. `hashloom
   status` lists the review queue.
-- **Do not contract churning interiors.** `remote.py`, `cache_server.py`, and
-  `shared.py` are deliberately uncontracted while the hosted-store work (the
-  v0.5 theme, renumbered from v0.4 in the 0.4.0 rename) reshapes them; helpers
-  (`tokens.py`, `project.py`) are weft. Pinning interiors is the failure mode
-  the README warns about.
+- **Do not contract churning interiors.** The cache server's *wire protocol*
+  is contracted (`cache_protocol` — it became a compatibility surface when the
+  v0.5 hosted-store theme shipped), but the module interiors behind it —
+  `remote.py`, `cache_server.py`, `shared.py` — stay uncontracted: their
+  store-facing obligations are `Store`'s, the wire's are `cache_protocol`'s.
+  Helpers (`tokens.py`, `project.py`) are weft. Pinning interiors is the
+  failure mode the README warns about.
 - **The hashloom gate layers on the DoD — it never replaces it.** Full
   `uv run pytest` and the benchmark below remain the definition of done;
   hashloom's cached verify must not be the only thing vouching for hashloom.

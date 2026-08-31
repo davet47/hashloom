@@ -1,0 +1,22 @@
+name: cache_protocol
+signature: "HTTP+JSON wire protocol of python -m hashloom.cache_server: six bearer-token routes serving the four team-portable store operations plus key-addressed revocation"
+deps: [Store, HashloomError]
+invariants:
+  - "GET /verification/<key>, GET /blob/<hash>, GET /stale are reads; POST /verification, POST /blob, POST /stale are publishes — every response is JSON, every error is {\"error\": {code, message}} (unexpected failures a structured 500 internal), never a stack trace"
+  - one --token grants both roles; with --publish-token set, reads accept either token (publish implies read) and publishes require the publish token — a valid read token on a publish route is 403 read_only, an unknown token 401 unauthorized, and the server refuses to start unauthenticated
+  - the shared cache stores passes only — a non-pass verdict publish is 400 only_greens, so failures never cross the team boundary
+  - verdict publishes are first-writer-wins on the verification key — a duplicate publish is a no-op that never refreshes ran_at and never resets stale, and concurrent publishes of one key land exactly one row, whole, never a blend
+  - "POST /stale tombstones keys (given directly, or resolved server-side from contract names to their EXISTING keys — future keys land fresh; over 1000 selectors refused); a revoked key stays stale under any publish, including one arriving after the mark (premarked); the only un-stale path is an explicit key-addressed restore ({\"stale\": false}, keys only); audit records are first-reason-wins and GET /stale lists them"
+  - "blobs are content-addressed by sha256: POST /blob answers {\"hash\": <sha256 of content>} and the digest is the address — clients re-hash on read and treat a mismatch as a miss, so a wrong blob can never serve as weft"
+  - the wire is a compatibility surface and evolves additively — an older client keeps working against a newer server (auth scoping, threading, and revocation all shipped with zero client changes)
+tests:
+  - tests/test_remote_store.py::test_read_token_reads_but_cannot_publish
+  - tests/test_remote_store.py::test_publish_token_implies_read
+  - tests/test_remote_store.py::test_failures_not_published_over_http
+  - tests/test_remote_store.py::test_duplicate_publish_is_first_writer_wins
+  - tests/test_remote_store.py::test_republish_after_revoke_stays_stale
+  - tests/test_remote_store.py::test_sweep_preserves_earlier_revocation_audit_and_restore_scope
+  - tests/test_remote_store.py::test_concurrent_publish_and_read_storm
+  - tests/test_remote_store.py::test_unexpected_store_error_returns_structured_500
+  - tests/test_remote_store.py::test_tampered_blob_is_a_miss_not_wrong_weft
+status: confirmed

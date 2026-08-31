@@ -7,6 +7,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **`cache_protocol` contract** (spec-only; drafted `inferred`, reviewed
+  and confirmed): the cache server's HTTP+JSON wire protocol is now a
+  contracted seam — routes and error envelope, publish/read auth scoping,
+  greens-only publishes, first-writer-wins verdicts, key-addressed
+  revocation semantics, content-addressed blobs, and the additive-evolution
+  stance. The v0.5 theme shipping made the wire a compatibility surface;
+  the module interiors behind it (`remote.py`, `cache_server.py`,
+  `shared.py`) deliberately stay uncontracted (CLAUDE.md updated to match).
 - **C# example project** (`examples/csharp-invoices`): 11 contracts over a
   billing run, the java-payroll three-layer shape in C# idiom — records
   hashed whole, `Class.Method` quals, an `[InlineData]` bracket table, and a

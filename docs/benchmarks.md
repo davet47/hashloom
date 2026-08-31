@@ -57,7 +57,7 @@ same effect inside one project.
 ## Cache economics (from a real store, not a benchmark)
 
 Verification caching is the other half of the payoff. This repo dogfoods
-hashloom (13 contracts over its own stable seams — see `contracts/`), and its
+hashloom (14 contracts over its own stable seams — see `contracts/`), and its
 store counters after day one:
 
 | store | verify requests | served from cache | test runs avoided | hit rate |
