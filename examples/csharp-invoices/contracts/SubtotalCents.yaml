@@ -1,0 +1,11 @@
+name: SubtotalCents
+signature: "static int SubtotalCents(IReadOnlyList<LineItem> lines)"
+deps: [LineItem, LineTotalCents]
+invariants:
+  - the sum of every line total; an empty order subtotals zero
+examples:
+  - in: "3 of WIDGET at 2500c, 10 of GADGET at 12000c"
+    out: "127500"
+tests:
+  - tests/PricingTests.cs::SubtotalSumsEveryLine
+impl: src/Pricing.cs::Pricing.SubtotalCents

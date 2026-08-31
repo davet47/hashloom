@@ -2,7 +2,7 @@
 formatting, sensitive to behaviour) and the `dotnet test` runner via the verify
 flow. Filter mapping and output parsing are unit-tested without any SDK, so
 part of this file always runs; the hash tests need a .NET SDK and the e2e tests
-restore xunit from NuGet on top."""
+restore their frameworks (xUnit, NUnit, xunit v3/MTP) from NuGet on top."""
 
 from __future__ import annotations
 
@@ -297,6 +297,57 @@ def test_csharp_nested_failure_line_parses():
     assert not ok and summary == "CalcTests.TotalSums: failed"
 
 
+def test_csharp_parameterized_failure_line_parses():
+    # a [Theory]/[TestCase] display name carries "(arg: value, ...)" — spaces
+    # included — between the name and the duration
+    a = CSharpAdapter()
+    out = (
+        "  Failed Invoices.ChargesTests.DiscountsByBracket(subtotalCents: 300000, "
+        "discountCents: 17500) [1 ms]\n"
+        "  Error Message:\n"
+        "   Assert.Equal() Failure: Values differ\n"
+    )
+    ok, summary = a._parse_test(_proc(1, out))
+    assert not ok
+    assert "DiscountsByBracket(subtotalCents: 300000" in summary
+    assert "Assert.Equal" in summary
+
+
+def test_csharp_mtp_failure_output_parses():
+    # captured from `dotnet test -p:TestingPlatformShowTestsFailure=true` on an
+    # xunit.v3 (Microsoft.Testing.Platform) project — run_tests sets the flag
+    a = CSharpAdapter()
+    out = (
+        "  Run tests: '/x/bin/Debug/net9.0/probe.dll' [net9.0|arm64]\n"
+        "/x/tests/CalcTests.cs(6): error test failed: CalcTests.TotalSums (10ms): "
+        "Assert.Equal() Failure: Values differ [/x/probe.csproj]\n"
+        "/x/tests/CalcTests.cs(6): error test failed: Expected: 4 [/x/probe.csproj]\n"
+        "/x/tests/CalcTests.cs(6): error test failed: Actual:   3 [/x/probe.csproj]\n"
+        "  Failed! - Failed: 1, Passed: 0, Skipped: 0, Total: 1, Duration: 113ms\n"
+        "/x/bin/Debug/net9.0/probe.dll : error run failed: Tests failed: "
+        "'/x/bin/Debug/net9.0/TestResults/probe_net9.0_arm64.log' [net9.0|arm64] [/x/probe.csproj]\n"
+    )
+    ok, summary = a._parse_test(_proc(1, out))
+    assert not ok
+    # the first `error test failed:` line is the summary: name + message,
+    # with the trailing [csproj] attribution stripped
+    assert "CalcTests.TotalSums" in summary and "Assert.Equal" in summary
+    assert "probe.csproj" not in summary
+
+
+def test_csharp_mtp_run_failed_without_test_lines_stays_conservative():
+    # without per-test lines (the property unset, or an older MTP), the
+    # `error run failed` tail alone must not read as a test failure
+    a = CSharpAdapter()
+    out = (
+        "  Failed! - Failed: 1, Passed: 0, Skipped: 0, Total: 1, Duration: 101ms\n"
+        "/x/probe.dll : error run failed: Tests failed: '/x/TestResults/p.log' [net9.0|arm64]\n"
+    )
+    with pytest.raises(HashloomError) as e:
+        a._parse_test(_proc(1, out))
+    assert e.value.code == "tests_failed_to_run"
+
+
 # -- end to end via dotnet test (restores xunit from NuGet) --------------------
 
 
@@ -323,6 +374,91 @@ def test_csharp_verify_fail_has_summary(tmp_path):
     store = SqliteStore(db_path(tmp_path))
     try:
         index(tmp_path, store)
+        r = api.verify(tmp_path, store, ["calc"])["results"][0]
+        assert r["status"] == "fail"
+        assert "TotalSums" in r.get("summary", "")
+    finally:
+        store.close()
+
+
+# -- NUnit and Microsoft.Testing.Platform, live (restore from NuGet) ----------
+
+
+def _nunit_project(root: Path) -> None:
+    """The xUnit fixture's shape, but NUnit — same node ids, same filter."""
+    _csharp_project(root)
+    (root / "calcproj.csproj").write_text(
+        '<Project Sdk="Microsoft.NET.Sdk">\n'
+        "  <PropertyGroup>\n"
+        f"    <TargetFramework>net{_MAJOR or 9}.0</TargetFramework>\n"
+        "    <Nullable>disable</Nullable>\n"
+        "    <IsPackable>false</IsPackable>\n"
+        "  </PropertyGroup>\n"
+        "  <ItemGroup>\n"
+        '    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />\n'
+        '    <PackageReference Include="NUnit" Version="4.2.2" />\n'
+        '    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />\n'
+        "  </ItemGroup>\n"
+        "</Project>\n"
+    )
+    (root / "tests" / "CalcTests.cs").write_text(
+        "using NUnit.Framework;\n\n"
+        "public class CalcTests {\n"
+        "    [Test]\n"
+        "    public void TotalSums() {\n"
+        "        Assert.That(Calc.Total(new[] {1, 2}), Is.EqualTo(3));\n"
+        "    }\n"
+        "}\n"
+    )
+
+
+def _mtp_project(root: Path) -> None:
+    """The fixture on xunit v3 — a Microsoft.Testing.Platform runner, whose
+    `dotnet test` output is MSBuild-error-shaped and ignores --filter."""
+    _csharp_project(root)
+    (root / "calcproj.csproj").write_text(
+        '<Project Sdk="Microsoft.NET.Sdk">\n'
+        "  <PropertyGroup>\n"
+        f"    <TargetFramework>net{_MAJOR or 9}.0</TargetFramework>\n"
+        "    <Nullable>disable</Nullable>\n"
+        "    <IsPackable>false</IsPackable>\n"
+        "    <OutputType>Exe</OutputType>\n"
+        "    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>\n"
+        "  </PropertyGroup>\n"
+        "  <ItemGroup>\n"
+        '    <PackageReference Include="xunit.v3" Version="1.1.0" />\n'
+        "  </ItemGroup>\n"
+        "</Project>\n"
+    )
+
+
+@needs_dotnet
+def test_csharp_nunit_verify_pass_cached_then_fail(tmp_path):
+    _nunit_project(tmp_path)
+    store = SqliteStore(db_path(tmp_path))
+    try:
+        index(tmp_path, store)
+        assert api.verify(tmp_path, store, ["calc"])["results"][0]["status"] == "pass"
+        assert api.verify(tmp_path, store, ["calc"])["results"][0]["status"] == "cached-pass"
+        # behaviour change -> real NUnit failure with a per-test summary
+        (tmp_path / "src" / "Calc.cs").write_text(_GOOD.replace("return s", "return s + 1"))
+        r = api.verify(tmp_path, store, ["calc"])["results"][0]
+        assert r["status"] == "fail"
+        assert "TotalSums" in r.get("summary", "")
+    finally:
+        store.close()
+
+
+@needs_dotnet
+def test_csharp_mtp_verify_pass_cached_then_fail(tmp_path):
+    _mtp_project(tmp_path)
+    store = SqliteStore(db_path(tmp_path))
+    try:
+        index(tmp_path, store)
+        assert api.verify(tmp_path, store, ["calc"])["results"][0]["status"] == "pass"
+        assert api.verify(tmp_path, store, ["calc"])["results"][0]["status"] == "cached-pass"
+        # a failure is a *fail* with the test named — not tests_failed_to_run
+        (tmp_path / "src" / "Calc.cs").write_text(_GOOD.replace("return s", "return s + 1"))
         r = api.verify(tmp_path, store, ["calc"])["results"][0]
         assert r["status"] == "fail"
         assert "TotalSums" in r.get("summary", "")

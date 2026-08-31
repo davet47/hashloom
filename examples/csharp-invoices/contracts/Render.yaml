@@ -1,0 +1,11 @@
+name: Render
+signature: "static string Render(Customer customer, Invoice invoice)"
+deps: [Customer, Invoice, FormatCents]
+invariants:
+  - one line per money field, every amount through FormatCents; ends with the total
+examples:
+  - in: "Ada's invoice for 127500c less 3875c plus 9890c tax"
+    out: "Ada Lovelace (c1) / subtotal $1275.00 / discount $38.75 / tax $98.90 / total $1335.15"
+tests:
+  - tests/BillingTests.cs::Formatting.RendersOneLinePerMoneyField
+impl: src/Billing.cs::Billing.Render

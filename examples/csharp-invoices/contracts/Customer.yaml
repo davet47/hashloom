@@ -1,0 +1,10 @@
+name: Customer
+signature: "record Customer(string Id, string Name, bool TaxExempt)"
+invariants:
+  - tax-exempt customers pay no tax anywhere in this project
+examples:
+  - in: "id c1, Ada Lovelace, not exempt"
+    out: "a Customer value; equal to any Customer with the same fields"
+tests:
+  - tests/TypesTests.cs::CustomerCarriesTaxExemption
+impl: src/Customer.cs::Customer

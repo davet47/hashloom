@@ -1,0 +1,10 @@
+name: TaxCents
+signature: "static int TaxCents(int taxableCents, bool taxExempt)"
+invariants:
+  - a flat 8% of the taxable amount, floored; exempt customers pay zero
+examples:
+  - in: "123625, not exempt"
+    out: "9890"
+tests:
+  - tests/ChargesTests.cs::TaxIsFlatUnlessExempt
+impl: src/Charges.cs::Charges.TaxCents

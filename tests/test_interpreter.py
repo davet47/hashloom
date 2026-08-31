@@ -126,3 +126,14 @@ def test_verify_threads_explicit_python(project):
 def test_status_reports_resolved_python(project):
     root, store = project  # no .venv in the fixture project
     assert api.status(root, store)["python"] == sys.executable
+
+
+def test_status_override_agrees_with_verify(project):
+    # the serve --python asymmetry (ISSUES #22): status must compute the same
+    # toolchain identity verify just keyed a green under, not the config's
+    root, store = project
+    write_config(root, {"python": "/no/such/python"})  # override must beat this
+    assert api.verify(root, store, ["total", "report"], python=sys.executable)["ok"] is True
+    s = api.status(root, store, python=sys.executable)
+    assert s["python"] == sys.executable  # the interpreter verify actually used
+    assert s["dirty"] == []  # the green verify just wrote is seen, not called dirty

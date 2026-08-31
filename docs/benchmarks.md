@@ -18,6 +18,7 @@ hashloom version.
 | go-ledger (Go) — full sweep | all 8 units | 6,656 | 2,201 | **3.0×** | 3.3× | 2026-07-04 | 0.3.0 |
 | ts-cart (TypeScript) — full sweep | all 8 units | 6,400 | 2,087 | **3.1×** | 3.4× | 2026-07-04 | 0.3.0 |
 | java-payroll (Java) — full sweep | all 11 units | 9,670 | 3,036 | **3.2×** | 2.8× | 2026-07-08 | unreleased |
+| csharp-invoices (C#) — full sweep | all 11 units | 11,054 | 2,872 | **3.8×** | 3.7× | 2026-08-31 | unreleased |
 
 Two different measurements, deliberately: the **DoD gate**
 (`bench/benchmark.py`, enforced in CI, exits nonzero below 5×) measures three
@@ -44,7 +45,8 @@ the more a ~300-token packet replaces:
 - **ts-cart**: `totalCents` 5.0× down to `Sku` 1.5×.
 - **java-payroll**: `slipFor` 5.4× down to `PaySlip` 1.4×. (Maven's quiet
   mode prints nothing on a green suite, so the raw baseline gets *zero*
-  suite-output tokens here — the Java row is the most conservative of the four.)
+  suite-output tokens here — the Java row is the most conservative of the five.)
+- **csharp-invoices**: `InvoiceFor` 5.6× down to `LineItem` 2.1×.
 
 The examples are deliberately small (8–20 contracts, chains two to six deep), so their
 sweeps sit in the 3–4× range. Deeper projects score higher, not lower: every
@@ -55,7 +57,7 @@ same effect inside one project.
 ## Cache economics (from a real store, not a benchmark)
 
 Verification caching is the other half of the payoff. This repo dogfoods
-hashloom (13 contracts over its own stable seams — see `contracts/`), and its
+hashloom (14 contracts over its own stable seams — see `contracts/`), and its
 store counters after day one:
 
 | store | verify requests | served from cache | test runs avoided | hit rate |
@@ -111,9 +113,10 @@ uv run python bench/benchmark.py
 
 # full sweeps — any hashloom project works, including yours
 uv run python bench/sweep.py examples/sales
-uv run python bench/sweep.py examples/go-ledger     # needs a Go toolchain
-uv run python bench/sweep.py examples/ts-cart       # npm install there first; Node >= 22.6
-uv run python bench/sweep.py examples/java-payroll  # needs a JDK >= 17 and Maven
+uv run python bench/sweep.py examples/go-ledger        # needs a Go toolchain
+uv run python bench/sweep.py examples/ts-cart          # npm install there first; Node >= 22.6
+uv run python bench/sweep.py examples/java-payroll     # needs a JDK >= 17 and Maven
+uv run python bench/sweep.py examples/csharp-invoices  # needs the .NET SDK >= 8
 ```
 
 New scenario runs belong in the table above — record the scope, date, and

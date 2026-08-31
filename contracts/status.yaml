@@ -1,14 +1,16 @@
 name: status
-signature: "(root: Path, store: Store) -> dict"
+signature: "(root: Path, store: Store, python: str | None = None) -> dict"
 deps: [Store, verification_key, impl_hash, HashloomError]
 invariants:
   - dirty means no current green — missing, stale, failed, or unresolvable toolchain all count
   - spec-only contracts are never dirty; they have nothing to verify
   - reports the resolved interpreter, cache hit-rate, recheck waste, and cumulative token counters
+  - the python override threads into the reported interpreter and every toolchain identity, so status agrees with a verify run under the same override
   - inferred contracts are listed as the human review queue, key absent when none
 tests:
   - tests/test_verify.py::test_status_reports_dirty_and_hit_rate
   - tests/test_verify.py::test_status_reports_wasted_rechecks
+  - tests/test_interpreter.py::test_status_override_agrees_with_verify
   - tests/test_store_and_api.py::test_status_lists_inferred_including_spec_only
 impl: src/hashloom/api.py::status
 status: confirmed
