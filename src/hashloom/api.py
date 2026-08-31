@@ -14,7 +14,7 @@ from .config import resolve_python, resolve_strict_provenance
 from .contract import contract_hash, diff_contracts, parse_contract
 from .errors import HashloomError, unknown_name
 from .langs import adapter_for
-from .project import atomic_write_text, case_collision, contract_lock, safe_contract_path
+from .project import atomic_write_text, case_collision, contract_lock, contracts_dir, safe_contract_path
 from .store import Store
 from .verify import clear_pycache, verification_key, verify_one
 
@@ -40,6 +40,32 @@ def _is_inferred(store: Store, name: str) -> bool:
     says so; absent status = confirmed, so 0.1.0 contracts keep full authority."""
     data, _ = _load(store, name)
     return data.get("status") == "inferred"
+
+
+def _disk_hash(root: Path, name: str) -> str | None:
+    """The contract's current hash from contracts/ on disk, or None when no
+    file is there any more. A file that no longer parses raises its own
+    structured refusal — a broken contract is not silently 'stale'."""
+    cdir = contracts_dir(root)
+    for ext in (".yaml", ".yml"):  # the same two extensions the indexer crawls
+        path = cdir / (name + ext)
+        if path.is_file():
+            return contract_hash(parse_contract(path.read_text(encoding="utf-8"), expect_name=name))
+    return None
+
+
+def _stale_on_disk(root: Path, store: Store, name: str, memo: dict[str, bool]) -> list[str]:
+    """Closure members whose contracts/ file was edited or deleted after the
+    last index — the pull-without-reindex gap (ISSUES #15). The store's hashes
+    would otherwise key, and serve, verdicts for contracts no longer on disk."""
+    hashes = store.contract_hashes()
+    stale = []
+    for member in (name, *store.transitive_deps(name)):
+        if member not in memo:
+            memo[member] = _disk_hash(root, member) != hashes.get(member)
+        if memo[member]:
+            stale.append(member)
+    return stale
 
 
 def get_contract(root: Path, store: Store, name: str) -> dict:
@@ -167,7 +193,9 @@ def verify(
 
     `radius=True` widens each name to its full blast radius (itself plus every
     transitive dependent), and the top-level `ok` is the hard pass/fail bit a
-    CI step or agent loop can block on.
+    CI step or agent loop can block on. A store that drifted from contracts/
+    on disk (a pull without `hashloom index`) refuses per unit with
+    stale_store rather than serving keys computed from stale hashes.
     """
     if isinstance(names, str):
         names = [names]
@@ -176,14 +204,30 @@ def verify(
     if not pycache_trust:
         clear_pycache(root)  # once per batch, before any pytest run
     strict = resolve_strict_provenance(root)
+    stale_memo: dict[str, bool] = {}  # disk-vs-store, computed once per contract per call
     results = []
     for name in names:
         try:
             # computed here, not in verify_one: outside the cache key, so the flag
             # reflects *current* status even when the verdict is a cached-pass
             inferred = []
+            stale = []
             if store.get_contract(name) is not None:  # unknown names keep erroring as unknown_contract
-                inferred = [n for n in (name, *store.transitive_deps(name)) if _is_inferred(store, n)]
+                # ISSUES #15: a pull without `hashloom index` must never let a key
+                # computed from the store's old hashes serve a cached-pass
+                stale = _stale_on_disk(root, store, name, stale_memo)
+                if not stale:  # provenance flags from a stale store are unreliable
+                    inferred = [n for n in (name, *store.transitive_deps(name)) if _is_inferred(store, n)]
+            if stale:
+                shown = ", ".join(stale[:5]) + (f", … +{len(stale) - 5} more" if len(stale) > 5 else "")
+                e = HashloomError(
+                    "stale_store",
+                    f"store is stale: contracts changed on disk since the last index ({shown}) "
+                    "— run 'hashloom index'",
+                    contract=name,
+                )
+                results.append({"name": name, "status": "error", **e.to_dict()})
+                continue
             if strict and inferred:
                 # refuse before verify_one: no pytest runs, no cache entry is
                 # written, and any existing green survives for after the confirm

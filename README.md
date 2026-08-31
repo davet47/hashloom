@@ -190,7 +190,7 @@ unreachable, verify degrades silently to local.
 
 ## CLI
 
-`hashloom init` · `hashloom index` · `hashloom serve` · `hashloom status` · `hashloom verify`. The sqlite store under `.hashloom/` is derived state: delete it any time and `hashloom index` rebuilds it from `contracts/`.
+`hashloom init` · `hashloom index` · `hashloom serve` · `hashloom status` · `hashloom verify`. The sqlite store under `.hashloom/` is derived state: delete it any time and `hashloom index` rebuilds it from `contracts/`. It can't serve you stale answers either — if `contracts/` on disk has drifted from the store (a `git pull` without a reindex), `verify` refuses the affected units with a structured `stale_store` error instead of serving verdicts keyed by old hashes, until you run `hashloom index`.
 
 `hashloom verify <name>…` runs the same cached verification as the MCP tool from the command line and exits nonzero unless every unit is green (a failure, an unknown name, or an unverifiable unit all block) — drop it in CI or a pre-commit hook. `--radius` widens each name to itself plus every transitive dependent, so one command gates a change's whole blast radius: `hashloom verify --radius Sale`.
 
