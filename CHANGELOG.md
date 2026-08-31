@@ -6,6 +6,26 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-26
+
+### Added
+- **C# language adapter** (`.cs`), the fifth language behind the
+  `LanguageAdapter` seam. Hashing runs a Roslyn token-stream helper that
+  hashloom compiles once per SDK version with the .NET SDK's *own* `csc`
+  against its *own* bundled `Microsoft.CodeAnalysis*` assemblies — no NuGet
+  package, no network; the compiled helper is cached in the user cache dir
+  keyed by SDK version + helper source. The hash is trivia-free,
+  length-prefixed, and CRLF-normalised: formatting/comment/XML-doc edits
+  never move it, signature/body changes always do. Tests run via
+  `dotnet test` on the root project/solution with the VSTest
+  `FullyQualifiedName~` contains-filter (xUnit, NUnit, and MSTest all ride
+  it); node ids follow the Java convention (`tests/CalcTests.cs::TotalSums`,
+  class from the file stem, nested classes as `Outer+Inner`). The toolchain
+  identity is `dotnet <sdk-version>` plus the dependency-set suffix over
+  `packages.lock.json` / `Directory.Packages.props`; config key
+  `{"dotnet": "..."}`. Needs the .NET SDK >= 8; CI installs 9. Follow-ups
+  (example project, live NUnit/MSTest/MTP coverage) are ISSUES.md #23.
+
 ## [0.5.0] - 2026-07-26
 
 **Shared → hosted.** The v0.5 theme lands whole: the shared verification
@@ -324,7 +344,9 @@ stay `heddle`).
 - CI (tests on Python 3.10 through 3.13 plus the >5x benchmark guard) and PyPI
   Trusted Publishing on version tags.
 
-[Unreleased]: https://github.com/davet47/hashloom/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/davet47/hashloom/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/davet47/hashloom/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/davet47/hashloom/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/davet47/hashloom/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/davet47/hashloom/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/davet47/hashloom/compare/v0.3.1...v0.3.2
