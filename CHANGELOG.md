@@ -7,6 +7,18 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **Verify-time store freshness gate** (v0.6 "honest greens" theme, item 1):
+  `verify` re-hashes each unit's closure — its own contract plus every
+  transitive dep — from `contracts/` on disk and refuses with a structured
+  `stale_store` error (no tests run, no cache entry written) when the store
+  no longer matches, closing the pull-without-reindex gap where a stale
+  `store.db` could serve cached-passes for contracts that changed on disk
+  (ISSUES.md #15). A contract deleted on disk counts as stale;
+  `hashloom index` clears the refusal. The check is bounded by each unit's
+  closure and memoised per call; response shape and the 5-tool/5-CLI
+  surface are unchanged (the `verify` contract gained the invariant).
+
+### Added
 - **`cache_protocol` contract** (spec-only; drafted `inferred`, reviewed
   and confirmed): the cache server's HTTP+JSON wire protocol is now a
   contracted seam — routes and error envelope, publish/read auth scoping,

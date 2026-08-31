@@ -66,12 +66,28 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
   installed-env drift remains revocation's job (see docs/hosted-store.md
   item 3 for the decisions).
 
+## Theme for v0.6: honest greens
+
+The one failure class hashloom cannot afford is serving a green it shouldn't.
+Two known instances make the theme:
+
+- **Store freshness at verify time** — ✓ **Shipped** (unreleased): a `git
+  pull` without `hashloom index` used to let verify serve cached-passes keyed
+  by the store's old contract hashes (ISSUES.md #15). Verify now re-hashes
+  each unit's closure — its own contract plus every transitive dep — from
+  `contracts/` on disk and refuses with `stale_store` (no tests run, no cache
+  entry) until `hashloom index`. Bounded by the closure, memoised per call.
+- **Fixture coverage in the test-source hash** — the headline item, open:
+  #18 hashes each test function's own AST, not the conftest fixtures and
+  helpers it calls; changing only those does not force a re-run yet. The
+  README documents this caveat. Plan: statically resolve the fixtures a test
+  requests (argument names + autouse) to their defs and hash those, with a
+  conservative whole-conftest fallback where resolution fails — the same
+  degrade-to-sound stance `test_source_hash` already takes. Python-first;
+  other languages' test helpers are ordinary imports and get their own issue.
+
 ## Sharpening the verification model (continuing)
 
-- **Fixture coverage in the test-source hash** — #18 hashes each test
-  function's own AST, not the conftest fixtures and helpers it calls; changing
-  only those does not force a re-run yet. The README documents this caveat;
-  closing it is the next precision/soundness item.
 - **Facet-aware invalidation**
   ([#67](https://github.com/davet47/hashloom/issues/67)) —
   `put_contract`'s semantic diff already reports
@@ -117,8 +133,7 @@ project avoids "scope creep toward Loom." Keep the surface minimal: 5 MCP tools,
 
 ## Suggested sequencing
 
-1. **Hosted-store hardening** (the v0.5 theme): auth scoping, concurrent
-   writers, cross-graph invalidation — then the dependency set in the key.
-2. **Fixture coverage** in the test-source hash, and strict provenance mode
-   (#49) if demand shows up.
+1. **Honest greens** (the v0.6 theme): the verify-time freshness gate
+   (✓ shipped) — then fixture coverage in the test-source hash.
+2. **Facet-aware invalidation** (#67), once the theme lands.
 3. **Tessl compatibility** and the error-code naming convention.

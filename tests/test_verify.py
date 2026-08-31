@@ -301,3 +301,61 @@ def test_status_reports_wasted_rechecks(project):
     assert rc["after_change"] == 2
     assert rc["verdict_unchanged"] == 2
     assert rc["wasted_rate"] == 1.0
+
+
+# -- store freshness: the pull-without-reindex gate (ISSUES #15) --------------
+
+
+def test_verify_refuses_stale_store_after_disk_edit(project):
+    root, store = project
+    assert statuses(api.verify(root, store, ["total"])) == {"total": "pass"}
+    runs = store.counters()["test_runs"]
+    # a pull lands a contract edit on disk; nobody re-runs `hashloom index`
+    path = root / "contracts" / "total.yaml"
+    path.write_text(path.read_text().replace(
+        "list[Item]) -> float", "list[Item], strict: bool) -> float"))
+    out = api.verify(root, store, ["total"])
+    assert out["ok"] is False
+    r = out["results"][0]
+    assert r["status"] == "error"
+    assert r["error"]["code"] == "stale_store"
+    assert "total" in r["error"]["message"] and "hashloom index" in r["error"]["message"]
+    # refused outright: the old green was not served, and no pytest ran
+    assert store.counters()["test_runs"] == runs
+
+
+def test_verify_refuses_when_dep_changed_on_disk(project):
+    root, store = project
+    assert api.verify(root, store, ["report"])["ok"] is True
+    # only the dep's spec changes on disk — report's own file is untouched
+    path = root / "contracts" / "Item.yaml"
+    path.write_text(path.read_text().replace("value: float", "value: int"))
+    out = api.verify(root, store, ["report"])
+    r = out["results"][0]
+    assert r["status"] == "error" and r["error"]["code"] == "stale_store"
+    assert "Item" in r["error"]["message"]
+    # radius over the stale dep: every widened unit refuses (Item is spec-only, dropped)
+    out = api.verify(root, store, ["Item"], radius=True)
+    assert out["ok"] is False
+    assert set(statuses(out)) == {"total", "report"}
+    assert all(r["error"]["code"] == "stale_store" for r in out["results"])
+
+
+def test_verify_refuses_when_contract_deleted_on_disk(project):
+    root, store = project
+    assert api.verify(root, store, ["total"])["ok"] is True
+    (root / "contracts" / "total.yaml").unlink()
+    r = api.verify(root, store, ["total"])["results"][0]
+    assert r["status"] == "error" and r["error"]["code"] == "stale_store"
+
+
+def test_reindex_clears_stale_store_refusal(project):
+    root, store = project
+    assert statuses(api.verify(root, store, ["total"])) == {"total": "pass"}
+    path = root / "contracts" / "total.yaml"
+    path.write_text(path.read_text().replace(
+        "list[Item]) -> float", "list[Item]) -> float | int"))
+    assert api.verify(root, store, ["total"])["results"][0]["error"]["code"] == "stale_store"
+    index(root, store)  # the prescribed fix
+    # fresh store: the new key misses the cache and re-runs to a real pass
+    assert statuses(api.verify(root, store, ["total"])) == {"total": "pass"}
