@@ -26,7 +26,13 @@
   verdicts, key-addressed revocation, and the declared dependency set in the
   verification key; plus both contract generators (graphify import, the
   spec-kit extension) and strict provenance mode. (v0.4 was the rename
-  release; Java, the fourth adapter, shipped in 0.3.2.)
+  release; Java, the fourth adapter, shipped in 0.3.2; C#, the fifth,
+  in 0.5.1.)
+- **v0.6** (0.6.0 → PyPI, 2026-09-01) — honest greens: the verify-time
+  store freshness gate (`stale_store` on pull-without-reindex) and the
+  fixture closure in the Python test-source hash; plus the `cache_protocol`
+  wire contract, `get_blob` re-hashing, `serve --python` status symmetry,
+  and the C# example with live NUnit/MTP coverage.
 
 What follows is where it goes next. The deferred-by-design items live in
 [ISSUES.md](ISSUES.md) and the [issue tracker](https://github.com/davet47/hashloom/issues);
@@ -71,13 +77,13 @@ remaining hard parts from [docs/hosted-store.md](docs/hosted-store.md):
 The one failure class hashloom cannot afford is serving a green it shouldn't.
 Two known instances make the theme:
 
-- **Store freshness at verify time** — ✓ **Shipped** (unreleased): a `git
+- **Store freshness at verify time** — ✓ **Shipped** (0.6.0): a `git
   pull` without `hashloom index` used to let verify serve cached-passes keyed
   by the store's old contract hashes (ISSUES.md #15). Verify now re-hashes
   each unit's closure — its own contract plus every transitive dep — from
   `contracts/` on disk and refuses with `stale_store` (no tests run, no cache
   entry) until `hashloom index`. Bounded by the closure, memoised per call.
-- **Fixture coverage in the test-source hash** — ✓ **Shipped** (unreleased):
+- **Fixture coverage in the test-source hash** — ✓ **Shipped** (0.6.0):
   the Python test-source hash now covers each test's fixture closure —
   requested names (arguments, `usefixtures`, literal `getfixturevalue`),
   autouse fixtures in scope, and fixtures of fixtures, statically resolved
