@@ -359,3 +359,31 @@ def test_reindex_clears_stale_store_refusal(project):
     index(root, store)  # the prescribed fix
     # fresh store: the new key misses the cache and re-runs to a real pass
     assert statuses(api.verify(root, store, ["total"])) == {"total": "pass"}
+
+
+# -- the fixture closure reaches the verification key (v0.6 theme, item 2) ----
+
+
+def test_conftest_fixture_edit_busts_cached_green(project):
+    root, store = project
+    # rewrite the test to lean on a conftest fixture
+    (root / "tests" / "conftest.py").write_text(
+        "import pytest\n\n@pytest.fixture\ndef items():\n"
+        "    from src.calc import Item\n    return [Item(2.0, True), Item(3.0, False)]\n"
+    )
+    (root / "tests" / "test_calc.py").write_text(
+        "from src.calc import Item, total, report\n\n\n"
+        "def test_total(items):\n    assert total(items) == 2.0\n\n\n"
+        'def test_report():\n    assert report([Item(2.0, True)]) == "total: 2.00"\n'
+    )
+    assert statuses(api.verify(root, store, ["total"])) == {"total": "pass"}
+    assert statuses(api.verify(root, store, ["total"])) == {"total": "cached-pass"}
+    runs = store.counters()["test_runs"]
+    # edit only the fixture body — the test file itself is untouched
+    (root / "tests" / "conftest.py").write_text(
+        "import pytest\n\n@pytest.fixture\ndef items():\n"
+        "    from src.calc import Item\n    return [Item(3.0, False), Item(2.0, True)]\n"
+    )
+    out = api.verify(root, store, ["total"])
+    assert statuses(out) == {"total": "pass"}  # the key moved: a real re-run
+    assert store.counters()["test_runs"] == runs + 1

@@ -77,14 +77,17 @@ Two known instances make the theme:
   each unit's closure — its own contract plus every transitive dep — from
   `contracts/` on disk and refuses with `stale_store` (no tests run, no cache
   entry) until `hashloom index`. Bounded by the closure, memoised per call.
-- **Fixture coverage in the test-source hash** — the headline item, open:
-  #18 hashes each test function's own AST, not the conftest fixtures and
-  helpers it calls; changing only those does not force a re-run yet. The
-  README documents this caveat. Plan: statically resolve the fixtures a test
-  requests (argument names + autouse) to their defs and hash those, with a
-  conservative whole-conftest fallback where resolution fails — the same
-  degrade-to-sound stance `test_source_hash` already takes. Python-first;
-  other languages' test helpers are ordinary imports and get their own issue.
+- **Fixture coverage in the test-source hash** — ✓ **Shipped** (unreleased):
+  the Python test-source hash now covers each test's fixture closure —
+  requested names (arguments, `usefixtures`, literal `getfixturevalue`),
+  autouse fixtures in scope, and fixtures of fixtures, statically resolved
+  through the test's module and conftest chain, nearest wins. Dynamic
+  fixture use the walk cannot see degrades to hashing the whole chain —
+  over-busting, never under-busting. Tests that resolve no project fixtures
+  keep byte-identical hashes, so the upgrade re-verifies only fixture-using
+  tests. Residual (ISSUES.md #24): plain helper functions a test imports,
+  and non-Python test helpers — a call-graph problem, deliberately not this
+  change.
 
 ## Sharpening the verification model (continuing)
 
