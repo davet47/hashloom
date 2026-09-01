@@ -1,6 +1,8 @@
 """Impl hash stability: formatting/comments/docstrings must not change the
 hash; logic changes must."""
 
+import hashlib
+
 import pytest
 
 from hashloom.errors import HashloomError
@@ -129,3 +131,103 @@ def test_test_source_hash_resolves_parametrised_id(tmp_path):
     _twrite(tmp_path, "def test_a():\n    assert 2\n")
     # the [case1] suffix is stripped and the function body hashed, so it changed
     assert before != implhash.test_source_hash(tmp_path, ["tests/t.py::test_a[case1]"])
+
+
+# --- the fixture closure: conftest fixtures are part of the test-source hash ---
+
+
+def _cwrite(tmp_path, body: str, where: str = "tests"):
+    d = tmp_path / where if where else tmp_path
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "conftest.py").write_text(body)
+
+
+_NID = "tests/t.py::test_a"
+
+
+def test_fixture_body_change_busts_the_test_source_hash(tmp_path):
+    _twrite(tmp_path, "def test_a(numbers):\n    assert sum(numbers) == 3\n")
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef numbers():\n    return [1, 2]\n")
+    base = implhash.test_source_hash(tmp_path, [_NID])
+    # comment/docstring-only fixture edit: no bust
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef numbers():\n    '''doc'''\n    # same value\n    return [1, 2]\n")
+    assert implhash.test_source_hash(tmp_path, [_NID]) == base
+    # unrelated def in the same conftest: no bust (closure, not whole file)
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef numbers():\n    return [1, 2]\n\ndef helper():\n    return 7\n")
+    assert implhash.test_source_hash(tmp_path, [_NID]) == base
+    # fixture body change: bust
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef numbers():\n    return [2, 1]\n")
+    assert implhash.test_source_hash(tmp_path, [_NID]) != base
+
+
+def test_fixtureless_tests_keep_their_prefixture_hash_shape(tmp_path):
+    # builtins (tmp_path) resolve to no project fixture, so the hash part is
+    # byte-identical to the pre-coverage format: no upgrade wave for these
+    _twrite(tmp_path, "def test_a(tmp_path):\n    assert tmp_path\n")
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef unused():\n    return 1\n")
+    expected = hashlib.sha256(
+        f"{_NID}={implhash._hash_def(tmp_path, 'tests/t.py', 'test_a')}".encode()
+    ).hexdigest()
+    assert implhash.test_source_hash(tmp_path, [_NID]) == expected
+
+
+def test_dynamic_fixture_use_degrades_to_whole_chain(tmp_path):
+    # a fixture name no static walk can see: hash the whole module + conftest
+    # chain, so ANY edit there busts — over-sensitive, never under-sensitive
+    _twrite(
+        tmp_path,
+        "def test_a(request):\n    name = 'num' + 'bers'\n"
+        "    assert sum(request.getfixturevalue(name)) == 3\n",
+    )
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef numbers():\n    return [1, 2]\n")
+    base = implhash.test_source_hash(tmp_path, [_NID])
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef numbers():\n    return [1, 2]\n\ndef unrelated():\n    return 7\n")
+    assert implhash.test_source_hash(tmp_path, [_NID]) != base
+
+
+def test_fixture_of_fixture_is_in_the_closure(tmp_path):
+    _twrite(tmp_path, "def test_a(numbers):\n    assert sum(numbers) == 3\n")
+    _cwrite(
+        tmp_path,
+        "import pytest\n\n@pytest.fixture\ndef seed():\n    return [1, 2]\n\n"
+        "@pytest.fixture\ndef numbers(seed):\n    return list(seed)\n",
+    )
+    base = implhash.test_source_hash(tmp_path, [_NID])
+    _cwrite(
+        tmp_path,
+        "import pytest\n\n@pytest.fixture\ndef seed():\n    return [2, 1]\n\n"
+        "@pytest.fixture\ndef numbers(seed):\n    return list(seed)\n",
+    )
+    assert implhash.test_source_hash(tmp_path, [_NID]) != base
+
+
+def test_autouse_fixture_is_in_the_closure_without_being_requested(tmp_path):
+    _twrite(tmp_path, "def test_a():\n    assert 1\n")
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture(autouse=True)\ndef env():\n    return 1\n")
+    base = implhash.test_source_hash(tmp_path, [_NID])
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture(autouse=True)\ndef env():\n    return 2\n")
+    assert implhash.test_source_hash(tmp_path, [_NID]) != base
+
+
+def test_nearest_fixture_wins_and_shadowed_one_is_ignored(tmp_path):
+    _twrite(tmp_path, "def test_a(numbers):\n    assert sum(numbers) == 3\n")
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef numbers():\n    return [1, 2]\n")
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef numbers():\n    return [3]\n", where="")
+    base = implhash.test_source_hash(tmp_path, [_NID])
+    # the root-level fixture is shadowed by tests/conftest.py: editing it is inert
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef numbers():\n    return [4]\n", where="")
+    assert implhash.test_source_hash(tmp_path, [_NID]) == base
+    # the nearest one is live
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef numbers():\n    return [2, 1]\n")
+    assert implhash.test_source_hash(tmp_path, [_NID]) != base
+
+
+def test_usefixtures_mark_pulls_the_fixture_into_the_closure(tmp_path):
+    _twrite(
+        tmp_path,
+        "import pytest\n\n@pytest.mark.usefixtures('env')\ndef test_a():\n    assert 1\n",
+    )
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef env():\n    return 1\n")
+    base = implhash.test_source_hash(tmp_path, [_NID])
+    _cwrite(tmp_path, "import pytest\n\n@pytest.fixture\ndef env():\n    return 2\n")
+    assert implhash.test_source_hash(tmp_path, [_NID]) != base

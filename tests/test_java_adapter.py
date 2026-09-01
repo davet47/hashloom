@@ -295,7 +295,8 @@ def test_java_verify_pass_then_cached(tmp_path):
     store = SqliteStore(db_path(tmp_path))
     try:
         index(tmp_path, store)
-        assert api.verify(tmp_path, store, ["calc"])["results"][0]["status"] == "pass"
+        r = api.verify(tmp_path, store, ["calc"])["results"][0]
+        assert r["status"] == "pass", r  # carry the payload: a CI mvn flake surfaces as error
         assert api.verify(tmp_path, store, ["calc"])["results"][0]["status"] == "cached-pass"
         # the impl source blob was stored (serve weft)
         assert "static int total" in store.get_blob(store.get_impl("calc")["blob_hash"])
@@ -313,7 +314,7 @@ def test_java_verify_fail_has_summary(tmp_path):
     try:
         index(tmp_path, store)
         r = api.verify(tmp_path, store, ["calc"])["results"][0]
-        assert r["status"] == "fail"
+        assert r["status"] == "fail", r  # carry the payload: a CI mvn flake surfaces as error
         assert "totalSums" in r.get("summary", "")
     finally:
         store.close()

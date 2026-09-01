@@ -6,6 +6,27 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- **Fixture coverage in the test-source hash** (v0.6 "honest greens" theme,
+  item 2 — the follow-up #18 left open): the Python test-source hash now
+  covers each test's fixture closure — the fixtures it requests (arguments,
+  `usefixtures` marks, literal `getfixturevalue` calls), autouse fixtures in
+  scope, and fixtures of fixtures — statically resolved through the test's
+  module and its conftest chain, nearest wins, exactly pytest's lookup
+  order. Editing only a conftest fixture now busts exactly the tests that
+  lean on it; comment/docstring-only fixture edits still bust nothing.
+  Fixture use the static walk cannot resolve (non-literal names, dynamic
+  marks, unparseable conftest) degrades to hashing the whole module +
+  conftest chain — over-busting, never under-busting. Names that resolve to
+  no project fixture (pytest builtins, plugin fixtures) add nothing: the
+  test def already names them and plugin behaviour rides the dependency-set
+  identity. **Upgrade cost**: cached greens for Python tests that resolve
+  project fixtures re-verify once (their keys move); tests with no project
+  fixtures keep byte-identical hashes and stay green. Residual, filed as
+  ISSUES.md #24: plain helper functions a test imports, and non-Python test
+  helpers, remain outside the hash. The `LanguageAdapter` contract carries
+  the new invariant.
+
 ### Added
 - **Verify-time store freshness gate** (v0.6 "honest greens" theme, item 1):
   `verify` re-hashes each unit's closure — its own contract plus every
