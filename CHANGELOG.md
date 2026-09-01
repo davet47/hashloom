@@ -6,6 +6,21 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-01
+
+**Honest greens.** The v0.6 theme lands whole: the one failure class
+hashloom cannot afford is serving a green it shouldn't, and this release
+closes the two known instances — a store that drifted from `contracts/` on
+disk now refuses instead of serving keys computed from stale hashes, and
+the Python test-source hash now covers the conftest fixtures a test
+actually leans on, ending the caveat the README had carried since v0.2.
+**One-time upgrade cost**: cached greens for Python tests that resolve
+project fixtures re-verify once; fixture-free tests keep byte-identical
+keys and stay green. Alongside the theme: the cache server's wire protocol
+under contract (`cache_protocol`), `RemoteStore.get_blob` re-hashing,
+`serve --python` status/verify symmetry, and the C# example project with
+live NUnit / xunit-v3 (MTP) runner coverage.
+
 ### Changed
 - **Fixture coverage in the test-source hash** (v0.6 "honest greens" theme,
   item 2 — the follow-up #18 left open): the Python test-source hash now
